@@ -3784,6 +3784,34 @@ local function _handleRemoteCommand(payload)
             myRoot.CFrame = ownerRoot.CFrame * CFrame.new(3, 0, 0)
         end)
 
+    elseif cmd == "freeze" then
+        pcall(function()
+            local lp   = game.Players.LocalPlayer
+            local char = lp.Character
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            local hum  = char and char:FindFirstChildWhichIsA("Humanoid")
+            if not hrp or not hum then return end
+            hrp.Anchored       = true
+            hum.WalkSpeed      = 0
+            hum.JumpPower      = 0
+            hum.AutoRotate     = false
+            getgenv()._vantaFrozen = true
+        end)
+
+    elseif cmd == "unfreeze" then
+        pcall(function()
+            local lp   = game.Players.LocalPlayer
+            local char = lp.Character
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            local hum  = char and char:FindFirstChildWhichIsA("Humanoid")
+            if not hrp or not hum then return end
+            hrp.Anchored       = false
+            hum.WalkSpeed      = 16
+            hum.JumpPower      = 50
+            hum.AutoRotate     = true
+            getgenv()._vantaFrozen = false
+        end)
+
     elseif cmd == "jumpscare" then
         pcall(function()
             local lp  = game.Players.LocalPlayer
