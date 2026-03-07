@@ -1,0 +1,867 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/raeth231321343/vanta.dev/refs/heads/main/ui%20startup.lua"))()
+wait(2.5)
+local WindUI
+do
+    local ok, result = pcall(function()
+        return require("./src/Init")
+    end)
+    if ok then
+        WindUI = result
+    else
+        WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/weatherwess-lgtm/Azure/refs/heads/main/Gofile"))()
+    end
+end
+local oldMakeFolder = makefolder
+local oldWriteFile = writefile
+local oldIsFolder = isfolder
+local oldIsFile = isfile
+local oldReadFile = readfile
+local oldListFiles = listfiles
+
+getgenv().makefolder = function() return true end
+getgenv().writefile = function() return true end
+getgenv().isfolder = function() return false end
+getgenv().isfile = function() return false end
+getgenv().readfile = function() return "" end
+getgenv().listfiles = function() return {} end
+
+if not WindUI then
+    WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/weatherwess-lgtm/Azure/refs/heads/main/Gofile"))()
+end
+
+
+getgenv().makefolder = oldMakeFolder
+getgenv().writefile = oldWriteFile
+getgenv().isfolder = oldIsFolder
+getgenv().isfile = oldIsFile
+getgenv().readfile = oldReadFile
+getgenv().listfiles = oldListFiles
+WindUI:Notify({
+    Title = "vanta.dev",
+    Content = "Loaded vanta.dev UI successfully!",
+    Duration = 5,
+    Type = "Success"
+})
+setclipboard("https://discord.gg/DV9xRuMHu")
+loadstring(game:HttpGet("https://raw.githubusercontent.com/weatherwess-lgtm/FlyToggle/refs/heads/main/Clipboard"))()
+local Window = WindUI:CreateWindow({
+    Title = "vanta.dev",
+    Icon = "eye",
+    Author = "vanta.dev",
+    Folder = "vanta_dev",
+    NewElements = true,
+    HideSearchBar = false,
+    Background = "",
+    BackgroundImageTransparency = 1,
+    Transparent = true,
+    OpenButton = {
+        Title = "Open vanta.dev UI",
+        CornerRadius = UDim.new(1,0),
+        StrokeThickness = 3,
+        Enabled = true,
+        Draggable = true,
+        OnlyMobile = false,
+        Color = ColorSequence.new(
+            Color3.fromHex("#000000"),
+            Color3.fromHex("#ffffff")
+        )
+    }
+})
+
+local AutoParry = Window:Tab({
+    Title = "Auto Parry",
+    Icon = "shield",
+
+})
+
+AutoParry:Section({
+    Title = "VANTA Auto Parry",
+
+})
+
+AutoParry:Toggle({
+    Title = "Auto Parry",
+    Default = false,
+    Callback = function(value)
+        local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+local Config = {
+Enabled = true,
+Reblocking = true,
+KeepBlock = true,
+Unblocking = true,
+ProjectilesPriority = true,
+ColiseumMode = false,
+BlockBeachBoy = false,
+PerfectBlockMode = false,
+BlockRange = 25,
+ReactionDelay = 0.05,
+PingCompensation = true,
+ExtraDelayEnabled = true,
+ExtraDelayAmount = 0.05,
+FarTargetDelay = 0.3,
+DistanceThreshold = 0.7,
+StandDelay = 0.02,
+}
+
+local function genId()
+return tostring(math.random(100000000, 999999999))
+end
+
+local function log(msg)
+print("[Vanta] " .. msg)
+end
+
+local function logBlock(reason, distance)
+local id = genId()
+local distStr = distance and string.format(" | dist=%.1f", distance) or ""
+log(string.format("Triggered blocking at (%s) | %s%s", id, reason, distStr))
+end
+
+local function logUnblock(reason)
+log("Unblocked | " .. (reason or "auto"))
+end
+
+local BlockDatabase = {
+PerfectBlocks = {
+{"rbxassetid://7217913060", {def = 0.2}},
+{"rbxassetid://4725629903", {def = 0.2}},
+{"rbxassetid://6032844827", {def = 0.2}},
+{"rbxassetid://163619849",{def = 0.2}},
+{"rbxassetid://7217914447", {def = 0, chckfunc = function(parent)
+local stand = parent:FindFirstChild("StandMorph")
+if stand then
+local standName = stand:FindFirstChild("Stand Name")
+return standName and standName.Value == "Star Platinum"
+end
+return false
+end}},
+{"rbxassetid://7217914447", {def = 0, chckfunc = function(parent)
+local stand = parent:FindFirstChild("StandMorph")
+if stand then
+local standName = stand:FindFirstChild("Stand Name")
+return standName and standName.Value ~= "Star Platinum"
+end
+return false
+end}},
+},
+
+BaseBlocks = {
+{"rbxassetid://6032836072", {def = 0.3}},
+{"rbxassetid://6034138660", {def = 0.3}},
+{"rbxassetid://10459370874", {def = 0.35, addw = -0.35, dist = 15}},
+{"rbxassetid://12440326715", {addw = -0.1, dist = 15}},
+{"rbxassetid://74034132845527", {def = 0.4}},
+},
+
+UnblockTriggers = {
+"rbxassetid://11876873350",
+},
+
+AnimationBlocks = {
+{"rbxassetid://6048575522", {def = 0, chckfunc = function(_, parent)
+local stand = parent:FindFirstChild("StandMorph")
+if stand then
+local standName = stand:FindFirstChild("Stand Name")
+return standName and standName.Value == "Star Platinum"
+end
+return false
+end}},
+{"rbxassetid://6048575522", {def = 0.3, dist = 20, chckfunc = function(_, parent)
+local stand = parent:FindFirstChild("StandMorph")
+if stand then
+local standName = stand:FindFirstChild("Stand Name")
+return standName and standName.Value ~= "Star Platinum"
+end
+return true
+end}},
+{"rbxassetid://4211804997", {def = 0.3, dist = 20, chckfunc = function(_, parent)
+local stand = parent:FindFirstChild("StandMorph")
+if stand then
+local standName = stand:FindFirstChild("Stand Name")
+return standName and standName.Value ~= "Tusk ACT 4"
+end
+return true
+end}},
+{"rbxassetid://13899360363", {def = 0.4, dist = 20}},
+{"rbxassetid://7189005773", {def = 0.3, dist = 20}},
+{"rbxassetid://6835249882", {def = 0.4, dist = 20}},
+{"rbxassetid://11886825775", {def = 0.3, dist = 20}},
+{"rbxassetid://4879759800", {def = 0.4, dist = 20}},
+{"rbxassetid://4825999731", {def = 0.5, dist = 160, chckfunc = function()
+return Config.ColiseumMode
+end}},
+{"rbxassetid://6704817082", {def = 0.35, dist = 20}},
+{"rbxassetid://6049426097", {def = 0.3, dist = 20}},
+{"rbxassetid://6105486059", {def = 0.35, dist = 20}},
+{"rbxassetid://5303743107", {def = 0.35, dist = 20}},
+{"rbxassetid://7250792726", {def = 0.4, dist = 20}},
+{"rbxassetid://4812642386", {def = 0.35, dist = 20}},
+{"rbxassetid://6216052429", {def = 0.3, chckfunc = function(anim, _)
+task.wait()
+return anim.Speed > 1.39
+end}},
+{"rbxassetid://6216052429", {def = 0.35, dist = 20}},
+{"rbxassetid://4096014941", {def = 0.4, chckfunc = function(anim, _)
+return anim.Speed > 1.049 and anim.Speed < 1.051
+end}},
+{"rbxassetid://4096014941", {def = 0.4, chckfunc = function(anim, _)
+return anim.Speed > 1.074 and anim.Speed < 1.076
+end}},
+{"rbxassetid://4096014941", {def = 0.4, chckfunc = function(anim, parent)
+local stand = parent:FindFirstChild("StandMorph")
+if stand then
+local standName = stand:FindFirstChild("Stand Name")
+if standName and standName.Value == "Magician's Red" then
+return anim.Speed == 1
+end
+end
+return false
+end}},
+{"rbxassetid://4096014941", {def = 0.4, chckfunc = function(_, parent)
+local stand = parent:FindFirstChild("StandMorph")
+if stand then
+local standName = stand:FindFirstChild("Stand Name")
+return standName and standName.Value == "Gold Experience"
+end
+return false
+end}},
+{"rbxassetid://4096014941", {def = 0.3, dist = 75, chckfunc = function(_, parent)
+local stand = parent:FindFirstChild("StandMorph")
+if not stand then return false end
+local standName = stand:FindFirstChild("Stand Name")
+if not standName or standName.Value ~= "The Hand" then return false end
+task.wait()
+for _, child in ipairs(stand:GetChildren()) do
+if child:IsA("Sound") and child.SoundId == "rbxassetid://7217913060" then
+return false
+end
+end
+return true
+end}},
+{"rbxassetid://4096014941", {def = 0.4, chckfunc = function(anim, _)
+return anim.Speed > 1.09 and anim.Speed < 1.11
+end}},
+{"rbxassetid://4096014941", {def = 0.4, chckfunc = function(anim, _)
+return anim.Speed > 0.84 and anim.Speed < 0.86
+end}},
+{"rbxassetid://12733018380", {def = 0.35, dist = 15, addw = 1.1}},
+{"rbxassetid://12733022476", {coliseum = true, dist = 1000, addw = 0.3}},
+{"rbxassetid://4608512208", {addw = 0.25}},
+{"rbxassetid://5303988283", {def = 0.2, dist = 20}},
+{"rbxassetid://6780938176", {def = 0.2, addw = 0.3, dist = 20}},
+{"rbxassetid://12292886724", {def = 0.35, dist = 20}},
+{"rbxassetid://6277192242", {def = 0.2, dist = 50, addw = 1}},
+{"rbxassetid://6651725175", {addw = -0.1, dist = 40}},
+{"rbxassetid://6216058630", {def = 0, coliseum = true, dist = 60, addw = -0.1}},
+{"rbxassetid://10726619714", {def = 0.2, addw = 0.55, dist = 20}},
+{"rbxassetid://12293320463", {def = 0.3, dist = 20}},
+{"rbxassetid://6869896659", {def = 0.2, addw = 0.75, dist = 20}},
+{"rbxassetid://14174878575", {def = 0.3, dist = 70, addw = -0.1, coliseum = true}},
+{"rbxassetid://7189003645", {def = 0.3, addw = 0.2, dist = 20}},
+{"rbxassetid://5793968491", {def = 0.35, dist = 20}},
+{"rbxassetid://4595562165", {def = 0, addw = 0.3}},
+{"rbxassetid://5227558947", {def = 0.35, dist = 20}},
+{"rbxassetid://4133363765", {def = 0.6, dist = 20}},
+{"rbxassetid://4691787301", {def = 0.25, addw = 0.75, dist = 100, chckfunc = function(_, parent)
+task.wait()
+local grapple = parent:FindFirstChild("RightHand") and parent.RightHand:FindFirstChild("Grapple")
+if grapple then
+return grapple.Attachment1 == LocalPlayer.Character.HumanoidRootPart.RootRigAttachment
+end
+return false
+end}},
+{"rbxassetid://12733016318", {def = 0.325, addw = -0.1, dist = 15, chckfunc = function(anim, _)
+return anim.Speed < 0.75
+end}},
+{"rbxassetid://4096014941", {def = 0.35, dist = 20}},
+{"rbxassetid://6048575522", {def = 0.35, dist = 20}},
+{"rbxassetid://4211804997", {def = 0.35, dist = 20}},
+{"rbxassetid://5303743107", {def = 0.3, dist = 20}},
+{"rbxassetid://6105486059", {def = 0.3, dist = 20}},
+{"rbxassetid://6049426097", {def = 0.35, dist = 20}},
+},
+
+AnimationUnblock = {
+"rbxassetid://12293318922",
+"rbxassetid://13819646949",
+"rbxassetid://6780937804",
+"rbxassetid://6780982308",
+{"rbxassetid://10443019808", {dist = 10}},
+},
+
+Projectiles = {
+{"VisionPlunderBubble", "Core", 15},
+{"SP Bullet", nil, 20, function(obj) return obj:FindFirstChild("Victim") and true or false end},
+{"Last Shot", nil, 20},
+{"Main", nil, 25, function(obj) return obj:FindFirstChild("BloodTrail") and true or false end},
+{"HomingShard", nil, 20},
+{"Bullet", nil, 20, function(obj)
+if obj.Name:find("SP Bullet") or obj.Name:find("SPBullet") then
+return false
+else
+return not obj:FindFirstChild("Victim")
+end
+end},
+{"CrossFirePiece", nil, 40, function(obj)
+local sparks = obj:FindFirstChild("OnFireSparks")
+return sparks and sparks.Enabled
+end, true, true},
+{"Baseball3", nil, 20},
+},
+
+SpecialObjects = {
+{"GroundIndicator", function(obj)
+local settings = {def = 0, wt = 0, addw = -0.1}
+local clone = obj:Clone()
+local expandedSize = 15 + 10
+clone.Size = Vector3.new(15 + expandedSize, 5, 40 + expandedSize)
+clone.CFrame = clone.CFrame * CFrame.new(0, 0, -12.5)
+task.wait(0.15)
+local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+if hrp then
+local pos = hrp.Position
+local min = clone.Position - clone.Size/2
+local max = clone.Position + clone.Size/2
+if pos.X >= min.X and pos.X <= max.X and
+ pos.Y >= min.Y and pos.Y <= max.Y and
+ pos.Z >= min.Z and pos.Z <= max.Z then
+RequestBlock(settings.def, settings.wt, settings.addw, false)
+end
+end
+clone:Destroy()
+return true
+end},
+{"FloorDash", function(obj)
+if not IsInRange(obj.Position, 40) then return false end
+local settings = {def = 0, wt = 0, addw = 0.25}
+task.wait(0.2)
+RequestBlock(settings.def, settings.wt, settings.addw, false)
+return true
+end},
+}
+}
+
+local State = {
+Blocking = false,
+LastBlock = 0,
+BlockActions = false,
+BlockProcsUntil = 0,
+LastTarget = nil,
+LastBad = "",
+HookedPlayers = {},
+FKeyHeld = false,
+Piloting = false,
+IsRagdolled = false,
+InTimeStop = false
+}
+
+local function GetPing()
+return LocalPlayer:GetNetworkPing()
+end
+
+local function IsTimeStop()
+return Workspace:FindFirstChild("TimeStop") or game.Lighting:FindFirstChild("TimeStop")
+end
+
+local function IsRagdolled(character)
+if not character then return false end
+return character:FindFirstChild("RagdollParts") and true or false
+end
+
+local function GetCharacter()
+return LocalPlayer.Character
+end
+
+local function GetHRP()
+local char = GetCharacter()
+return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function IsInRange(position, range)
+local hrp = GetHRP()
+if not hrp then return false end
+return (position - hrp.Position).Magnitude <= range
+end
+
+local function Block()
+local char = GetCharacter()
+if not char then return end
+local blockingCap = char:FindFirstChild("Blocking_Capacity")
+if blockingCap and blockingCap.Value <= 0 then
+State.Blocking = true
+local remote = char:FindFirstChild("RemoteEvent")
+if remote then
+for i = 1, 3 do
+remote:FireServer("StartBlocking", "pass")
+task.wait()
+end
+end
+end
+end
+
+local function Unblock(forced, instant)
+if not Config.Unblocking and not forced then return end
+if forced and not Config.Reblocking and not IsRagdolled(GetCharacter()) then return 42 end
+
+local char = GetCharacter()
+if not char then return end
+
+if not (forced or instant) and State.FKeyHeld and Config.KeepBlock and not IsRagdolled(char) then
+return
+end
+
+local remote = char:FindFirstChild("RemoteEvent")
+if remote then
+for i = 1, 5 do
+remote:FireServer("StopBlocking", "pass")
+task.wait()
+end
+end
+
+State.Blocking = false
+State.BlockActions = false
+logUnblock(forced and "forced" or "auto-release")
+end
+
+local function RequestBlock(defense, waitTime, addWait, isPerfect, priority, isStandAttack, _logReason, _logDist)
+if not Config.Enabled then return end
+if State.BlockActions then
+local currentPrio = tonumber(State.BlockActions) or 0
+if priority and priority <= currentPrio then return end
+end
+
+State.BlockActions = priority or true
+
+local char = GetCharacter()
+if not char then return end
+
+local remote = char:FindFirstChild("RemoteEvent")
+if remote then
+remote:FireServer("HoldAttack", {Bool = false, Type = "m1"})
+end
+
+State.LastBlock = State.LastBlock + 1
+local currentBlock = State.LastBlock
+
+local blockingCap = char:FindFirstChild("Blocking_Capacity")
+if blockingCap and blockingCap.Value > 0 and isPerfect then
+if defense < 0.2 or not Config.Reblocking then return end
+if Unblock(true) == 42 then return end
+end
+
+local pingComp = Config.PingCompensation and GetPing() or 0
+local actualWait = math.max(0, defense - pingComp)
+
+if waitTime and waitTime > actualWait then
+actualWait = waitTime
+end
+
+if Config.ExtraDelayEnabled then
+actualWait = actualWait + Config.ExtraDelayAmount
+end
+
+if isStandAttack and Config.StandDelay > 0 then
+actualWait = actualWait + Config.StandDelay
+end
+
+local scheduledClock = os.date("%H:%M:%S", os.time() + math.floor(actualWait))
+local distStr = _logDist and string.format(" | dist=%.1f", _logDist) or ""
+log(string.format("Scheduling block in %.3f s -> %s | %s%s", actualWait, scheduledClock, _logReason or "unknown", distStr))
+
+task.wait(actualWait)
+
+if State.LastBlock ~= currentBlock then return end
+if IsTimeStop() then
+State.BlockActions = false
+return
+end
+
+logBlock(_logReason or "unknown", _logDist)
+
+Block()
+
+local unblockDelay = 0.4 + math.max(0.1, GetPing()) + (addWait or 0)
+task.wait(unblockDelay)
+
+if State.LastBlock == currentBlock and not IsTimeStop() then
+State.BlockActions = false
+Unblock(false)
+end
+end
+
+local function ProcessBlockTrigger(source, parent, secondaryPart)
+if not Config.Enabled then return end
+if IsTimeStop() then return end
+if IsRagdolled(GetCharacter()) then return end
+if State.BlockProcsUntil > tick() then return end
+
+local isPerfect = false
+local defense = 0.4
+local addWait = 0
+local priority = 0
+local distance = Config.BlockRange
+local found = false
+local extraWait = 0
+local isStandAttack = false
+local triggerReason = "unknown"
+
+local function checkDistance(maxDist)
+local hrp = GetHRP()
+if not hrp then return false, 0 end
+
+local targetPos = secondaryPart and secondaryPart.Position or parent.Position
+local dist = (hrp.Position - targetPos).Magnitude
+
+if dist > maxDist then
+if secondaryPart then
+dist = (hrp.Position - parent.Position).Magnitude
+if dist > maxDist then return false, dist end
+else
+return false, dist
+end
+end
+
+if dist > maxDist * Config.DistanceThreshold then
+extraWait = Config.FarTargetDelay
+task.wait(extraWait)
+hrp = GetHRP()
+if not hrp then return false, dist end
+dist = (hrp.Position - targetPos).Magnitude
+if dist > maxDist then return false, dist end
+end
+
+return true, dist
+end
+
+if source:IsA("Sound") then
+for _, blockData in ipairs(BlockDatabase.PerfectBlocks) do
+local id = type(blockData) == "table" and blockData[1] or blockData
+local settings = type(blockData) == "table" and blockData[2] or {}
+if source.SoundId == id then
+if settings.chckfunc and not settings.chckfunc(parent) then continue end
+isPerfect = true
+defense = settings.def or 0.2
+distance = settings.dist or distance
+addWait = settings.addw or addWait
+priority = settings.prio or priority
+triggerReason = "PerfectBlock sound " .. id
+found = true
+break
+end
+end
+
+if not found then
+for _, blockData in ipairs(BlockDatabase.BaseBlocks) do
+local id = type(blockData) == "table" and blockData[1] or blockData
+local settings = type(blockData) == "table" and blockData[2] or {}
+if source.SoundId == id then
+isPerfect = false
+defense = settings.def or 0.3
+distance = settings.dist or distance
+addWait = settings.addw or addWait
+triggerReason = "BaseBlock sound " .. id
+found = true
+break
+end
+end
+end
+
+if not found then
+for _, id in ipairs(BlockDatabase.UnblockTriggers) do
+if source.SoundId == id and State.LastTarget == parent then
+State.LastBlock = State.LastBlock + 1
+State.BlockProcsUntil = tick() + 0.75
+State.BlockActions = false
+Unblock(false)
+return
+end
+end
+end
+end
+
+if not found and source:IsA("AnimationTrack") then
+local animId = source.Animation and source.Animation.AnimationId
+if animId then
+for _, blockData in ipairs(BlockDatabase.AnimationBlocks) do
+local id = type(blockData) == "table" and blockData[1] or blockData
+local settings = type(blockData) == "table" and blockData[2] or {}
+
+if type(blockData) == "table" and settings.coliseum and not Config.ColiseumMode then
+continue
+end
+
+if animId == id then
+if settings.chckfunc and not settings.chckfunc(source, parent) then continue end
+
+isPerfect = (settings.def or 0.4) <= 0.2
+defense = settings.def or 0.3
+distance = settings.dist or distance
+addWait = settings.addw or addWait
+priority = settings.prio or priority
+triggerReason = "AnimBlock " .. id
+found = true
+
+if id == "rbxassetid://6048575522" or id == "rbxassetid://4096014941" or
+ id == "rbxassetid://4211804997" or id == "rbxassetid://5303743107" or
+ id == "rbxassetid://6105486059" or id == "rbxassetid://6049426097" then
+isStandAttack = true
+end
+
+break
+end
+end
+end
+end
+
+if found then
+State.LastTarget = parent
+local inRange, actualDist = checkDistance(distance)
+if inRange then
+local pingComp = Config.PingCompensation and GetPing() or 0
+local calculatedWait = math.max(0, defense - pingComp) + extraWait
+RequestBlock(defense, calculatedWait, addWait, isPerfect, priority, isStandAttack, triggerReason, actualDist)
+end
+end
+end
+
+local function HandleProjectile(obj)
+if not Config.Enabled then return end
+
+for _, projData in ipairs(BlockDatabase.Projectiles) do
+local namePattern, childName, range, validator, requireAnchored, ignoreAnchored = unpack(projData)
+
+if obj.Name:find(namePattern) then
+local target = childName and obj:FindFirstChild(childName) or obj
+
+if validator and not validator(obj) then continue end
+
+local hrp = GetHRP()
+if not hrp then return end
+
+local function isInRange()
+local pos = target.Position
+local vel = target.AssemblyLinearVelocity
+
+if vel.Magnitude > 0.01 then
+local unit = vel.Unit
+local predictedPos = pos + unit * 10
+local dist1 = (hrp.Position - pos).Magnitude
+local dist2 = (hrp.Position - predictedPos).Magnitude
+return dist1 < range or dist2 < range
+else
+return (hrp.Position - pos).Magnitude < range
+end
+end
+
+local startTime = tick()
+while obj.Parent and obj:IsDescendantOf(Workspace) do
+if isInRange() and (not State.BlockActions or Config.ProjectilesPriority) then
+State.BlockActions = true
+if Config.ProjectilesPriority then
+State.BlockActions = 42000
+end
+
+logBlock("Projectile: " .. obj.Name, (hrp.Position - target.Position).Magnitude)
+Block()
+
+local blockStart = tick()
+while obj.Parent and (tick() - blockStart < 0.75) do
+if not isInRange() then break end
+task.wait()
+end
+
+if tick() - blockStart < 0.432 then
+task.wait(0.432 - (tick() - blockStart))
+end
+
+if not IsTimeStop() then
+Unblock(false)
+State.BlockActions = false
+end
+return
+end
+task.wait()
+end
+end
+end
+end
+
+local function HandleSpecialObject(obj)
+if not Config.Enabled then return end
+
+for _, specialData in ipairs(BlockDatabase.SpecialObjects) do
+local namePattern, handler = unpack(specialData)
+if obj.Name:find(namePattern) then
+handler(obj)
+return
+end
+end
+end
+
+local function HookPlayer(player)
+if player == LocalPlayer then return end
+if State.HookedPlayers[player.Name] then return end
+
+local function setupHooks(character)
+if not character then return end
+
+local humanoid = character:WaitForChild("Humanoid", 5)
+local animator = humanoid and humanoid:WaitForChild("Animator", 5)
+
+if animator then
+animator.AnimationPlayed:Connect(function(track)
+ProcessBlockTrigger(track, character.PrimaryPart, nil)
+end)
+end
+
+character.DescendantAdded:Connect(function(desc)
+if desc:IsA("Sound") then
+task.wait()
+ProcessBlockTrigger(desc, character.PrimaryPart, nil)
+elseif desc:IsA("Model") and desc.Name == "StandMorph" then
+task.wait(0.15)
+
+local standAnimators = {}
+
+local standAnimator = desc:FindFirstChild("Animator", true)
+if standAnimator then table.insert(standAnimators, standAnimator) end
+
+local standHumanoid = desc:FindFirstChildOfClass("Humanoid")
+if standHumanoid then
+local standHumAnimator = standHumanoid:FindFirstChild("Animator")
+if standHumAnimator then table.insert(standAnimators, standHumAnimator) end
+end
+
+local animController = desc:FindFirstChildOfClass("AnimationController")
+if animController then
+local ctrlAnimator = animController:FindFirstChild("Animator")
+if ctrlAnimator then table.insert(standAnimators, ctrlAnimator) end
+end
+
+for _, anim in ipairs(standAnimators) do
+anim.AnimationPlayed:Connect(function(track)
+ProcessBlockTrigger(track, character.PrimaryPart, nil)
+end)
+end
+
+desc.DescendantAdded:Connect(function(standDesc)
+if standDesc:IsA("Animator") then
+task.wait(0.1)
+standDesc.AnimationPlayed:Connect(function(track)
+ProcessBlockTrigger(track, character.PrimaryPart, nil)
+end)
+end
+end)
+elseif desc:IsA("Animator") then
+task.wait(0.1)
+desc.AnimationPlayed:Connect(function(track)
+ProcessBlockTrigger(track, character.PrimaryPart, nil)
+end)
+end
+end)
+
+local existingStand = character:FindFirstChild("StandMorph")
+if existingStand then
+task.wait(0.15)
+local standAnimators = {}
+
+local standAnimator = existingStand:FindFirstChild("Animator", true)
+if standAnimator then table.insert(standAnimators, standAnimator) end
+
+local standHumanoid = existingStand:FindFirstChildOfClass("Humanoid")
+if standHumanoid then
+local standHumAnimator = standHumanoid:FindFirstChild("Animator")
+if standHumAnimator then table.insert(standAnimators, standHumAnimator) end
+end
+
+local animController = existingStand:FindFirstChildOfClass("AnimationController")
+if animController then
+local ctrlAnimator = animController:FindFirstChild("Animator")
+if ctrlAnimator then table.insert(standAnimators, ctrlAnimator) end
+end
+
+for _, anim in ipairs(standAnimators) do
+anim.AnimationPlayed:Connect(function(track)
+ProcessBlockTrigger(track, character.PrimaryPart, nil)
+end)
+end
+end
+end
+
+if player.Character then
+setupHooks(player.Character)
+end
+
+player.CharacterAdded:Connect(setupHooks)
+State.HookedPlayers[player.Name] = true
+log("Hooked player: " .. player.Name)
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+if not gameProcessed and input.KeyCode == Enum.KeyCode.F then
+State.FKeyHeld = true
+end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+if input.KeyCode == Enum.KeyCode.F then
+State.FKeyHeld = false
+end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+char.ChildAdded:Connect(function(child)
+if child.Name == "RagdollParts" then
+State.IsRagdolled = true
+State.LastBlock = State.LastBlock + 1
+State.BlockProcsUntil = tick() + 0.2
+State.BlockActions = false
+Unblock(false)
+end
+end)
+
+char.ChildRemoved:Connect(function(child)
+if child.Name == "RagdollParts" then
+State.IsRagdolled = false
+end
+end)
+end)
+
+Players.PlayerAdded:Connect(HookPlayer)
+for _, player in ipairs(Players:GetPlayers()) do
+HookPlayer(player)
+end
+
+Workspace.DescendantAdded:Connect(function(desc)
+if not Config.Enabled then return end
+HandleProjectile(desc)
+HandleSpecialObject(desc)
+end)
+
+Workspace.ChildAdded:Connect(function(child)
+if Config.Enabled then
+HandleProjectile(child)
+HandleSpecialObject(child)
+end
+end)
+
+if Workspace:FindFirstChild("IgnoreInstances") then
+Workspace.IgnoreInstances.ChildAdded:Connect(function(child)
+if Config.Enabled then
+HandleProjectile(child)
+HandleSpecialObject(child)
+end
+end)
+end
+
+log("Initialized. Enabled=" .. tostring(Config.Enabled))
+    end
+}) 
