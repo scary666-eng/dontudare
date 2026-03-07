@@ -79,6 +79,21 @@ AutoParry:Section({
 
 })
 
+AutoParry:Slider({
+    Title = "Block Timing",
+    Desc = "Adjust the reaction delay for blocking (in ms)",
+    Step = 1,
+    Value = {
+        Min = 20,
+        Max = 120,
+        Default = 50,
+    },
+    Callback = function(value)
+        getgenv().BlockTiming = value / 1000
+        print("Block Timing set to: " .. value .. "ms")
+    end
+})
+
 AutoParry:Toggle({
     Title = "Auto Parry",
     Default = false,
