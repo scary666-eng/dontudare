@@ -70,6 +70,18 @@ WindUI:AddTheme({
     }),                                                                             
     
 })
+WindUI:AddTheme({
+    Name = "michaels theme", -- theme name
+    Accent = Color3.fromHex("#21b61e"),
+    Background = Color3.fromHex("#1d1d1d"), -- Accent
+    Outline = Color3.fromHex("#17cc35"),
+    Text = Color3.fromHex("#d6d6d6"),
+    Placeholder = Color3.fromHex("#252525"),
+    Button = Color3.fromHex("#14b84d"),
+    Icon = Color3.fromHex("#14e66f"),
+      Slider = Color3.fromHex("#3f9453"), -- Button
+    SliderThumb = Color3.fromHex("#07c339"), -- White
+})
 WindUI:SetTheme("kazakori theme")
 end)
 Window:SetToggleKey(Enum.KeyCode.K)
@@ -206,13 +218,13 @@ local FarmingTab = Window:Tab({ Title = "Farming", Icon = "craft:macbook-stroke"
 local StandFarmTab = Window:Tab({ Title = "StandFarm", Icon = "target" })
 local SBRTab = Window:Tab({ Title = "SBR", Icon = "chess-knight" })
 local SellingTab = Window:Tab({ Title = "Selling", Icon = "dollar-sign" })
+local PurchaseTab = Window:Tab({ Title = "Purchase", Icon = "shopping-cart" })
 local VisualTab = Window:Tab({ Title = "Visual", Icon = "eye" })
 local AdjustTab = Window:Tab({ Title = "Adjust", Icon = "sliders-horizontal" })
 local MiscTab = Window:Tab({ Title = "Misc", Icon = "zap" })
 local LevelFarmTab = Window:Tab({ Title = "Level Farm", Icon = "arrow-up" })
 local TrollingTab = Window:Tab({ Title = "Trolling", Icon = "joystick" })
 local SettingsTab = Window:Tab({ Title = "Settings", Icon = "settings" })
-local PurchaseTab = Window:Tab({ Title = "Purchase", Icon = "shopping-cart" })
 local player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -1640,8 +1652,298 @@ local soundNotifierToggle = MiscTab:Toggle({
         end
     end
 })
+getgenv().TWOHFarmEnabled = false
+getgenv().TWOHFarmConnection = nil
+getgenv().TWOHCleanupFunctions = {}
+
+MiscTab:Section({
+    Title = "Player Farm",
+})
+
+local viewToggle2 = MiscTab:Toggle({
+    Flag = "ViewStandMisc",
+    Title = "View Stand",
+    Locked = true,
+    LockedTitle = "USE ONE UNDER TROLLING TAB (VIEW STAND)",
+    Default = false,
+    Callback = function(value)
+        viewEnabled = value
+        if viewToggle then pcall(function() viewToggle:Set(value) end) end
+        if value then
+            local stand = getStand()
+            if not stand then
+                notify("View Stand", "Equipt your stand first")
+                return
+            end
+            enableView(stand)
+        else
+            disableView()
+        end
+    end
+})
+
 MiscTab:Space()
+
+getgenv().SelectedHuntTarget = ""
+getgenv().GetPlayerList = function()
+    local playerNames = {}
+    for _, p in pairs(game:GetService("Players"):GetPlayers()) do
+        if p ~= game.Players.LocalPlayer then
+            table.insert(playerNames, p.Name)
+        end
+    end
+    return playerNames
+end
+
 MiscTab:Dropdown({
+    Flag = "TWOHPlayerSelect",
+    Title = "Select Player to Hunt",
+    SearchBarEnabled = true,
+    Values = GetPlayerList(),
+    Callback = function(selected)
+        if not selected or selected == "" then
+            getgenv().TWOHFarmEnabled = false
+            return
+        end
+        
+        getgenv().SelectedHuntTarget = selected
+        
+        local targetPlayer = game:GetService("Players"):FindFirstChild(selected)
+        if targetPlayer and targetPlayer.Character then
+            notify("YBA Script", "Target set to: " .. selected)
+            
+            -- Clear previous cleanup functions
+            for _, cleanupFunc in pairs(getgenv().TWOHCleanupFunctions) do
+                pcall(cleanupFunc)
+            end
+            getgenv().TWOHCleanupFunctions = {}
+            
+            -- Auto start TWOH farm
+            getgenv().TWOHFarmEnabled = true
+            
+            local noclipEnabled = false
+            local noclipConn = nil
+            local bp = nil
+            local bg = nil
+            local standBp = nil
+            local standBg = nil
+            local RunService = game:GetService("RunService")
+            local originalPos = nil
+            
+            local function enableNoclip()
+                if noclipEnabled then return end
+                local char = game.Players.LocalPlayer.Character
+                if not char then return end
+                
+                noclipConn = RunService.Stepped:Connect(function()
+                    for _, part in pairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end)
+                noclipEnabled = true
+            end
+            
+            local function disableNoclip()
+                if noclipConn then
+                    noclipConn:Disconnect()
+                    noclipConn = nil
+                end
+                noclipEnabled = false
+            end
+            
+            local function teleportAboveGround()
+                local myChar = game.Players.LocalPlayer.Character
+                if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+                    local hrp = myChar.HumanoidRootPart
+                    local targetLoc = originalPos or hrp.CFrame
+                    hrp.CFrame = targetLoc + Vector3.new(0, 10, 0)
+                    task.wait(0.1)
+                    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                end
+            end
+            
+            local function cleanup()
+                disableNoclip()
+                pcall(function()
+                    if bp then bp:Destroy() bp = nil end
+                    if bg then bg:Destroy() bg = nil end
+                    if standBp then standBp:Destroy() standBp = nil end
+                    if standBg then standBg:Destroy() standBg = nil end
+                end)
+                task.wait(0.2)
+                teleportAboveGround()
+                task.wait(0.2)
+            end
+            
+            table.insert(getgenv().TWOHCleanupFunctions, cleanup)
+            
+            task.spawn(function()
+                while getgenv().TWOHFarmEnabled do
+                    task.wait()
+                    
+                    local targetPlayer = game:GetService("Players"):FindFirstChild(selected)
+                    if not targetPlayer or not targetPlayer.Character then
+                        notify("YBA Script", "Target player not found!")
+                        getgenv().TWOHFarmEnabled = false
+                        cleanup()
+                        break
+                    end
+                    
+                    local myChar = game.Players.LocalPlayer.Character
+                    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
+                        game.Players.LocalPlayer.CharacterAdded:Wait()
+                        task.wait(0.5)
+                        originalPos = nil
+                        continue
+                    end
+                    
+                    if not originalPos then
+                        originalPos = myChar.HumanoidRootPart.CFrame
+                    end
+                    
+                    local targetChar = targetPlayer.Character
+                    local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+                    local targetHum = targetChar:FindFirstChildWhichIsA("Humanoid")
+                    local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+                    local myRemote = myChar:FindFirstChild("RemoteEvent")
+                    local myStandMorph = myChar:FindFirstChild("StandMorph")
+                    
+                    if not targetHRP or not targetHum or targetHum.Health <= 0 then
+                        notify("YBA Script", "Target is dead or invalid!")
+                        getgenv().TWOHFarmEnabled = false
+                        cleanup()
+                        break
+                    end
+                    
+                    enableNoclip()
+                    
+                    local undergroundOffset = -25
+                    local targetCFrame = targetHRP.CFrame + Vector3.new(0, undergroundOffset, 0)
+                    
+                    if myChar.PrimaryPart then
+                        if not bp or bp.Parent ~= myChar.PrimaryPart then
+                            bp = Instance.new("BodyPosition")
+                            bp.Position = targetCFrame.Position
+                            bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                            bp.P = 10000
+                            bp.D = 100
+                            bp.Parent = myChar.PrimaryPart
+                        else
+                            bp.Position = targetCFrame.Position
+                        end
+                        
+                        if not bg or bg.Parent ~= myChar.PrimaryPart then
+                            bg = Instance.new("BodyGyro")
+                            bg.CFrame = targetCFrame
+                            bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                            bg.P = 10000
+                            bg.D = 100
+                            bg.Parent = myChar.PrimaryPart
+                        else
+                            bg.CFrame = targetCFrame
+                        end
+                        
+                        myChar.PrimaryPart.CFrame = targetCFrame
+                        myChar.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        myChar.PrimaryPart.Velocity = Vector3.new(0, 0, 0)
+                    end
+                    
+                    if myStandMorph and myStandMorph.PrimaryPart then
+                        local standRoot = myStandMorph.PrimaryPart
+                        local standTargetCFrame = targetHRP.CFrame - targetHRP.CFrame.LookVector * 1.1
+                        
+                        if not standBp or standBp.Parent ~= standRoot then
+                            standBp = Instance.new("BodyPosition")
+                            standBp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                            standBp.P = 10000
+                            standBp.D = 100
+                            standBp.Parent = standRoot
+                        end
+                        standBp.Position = standTargetCFrame.Position
+                        
+                        if not standBg or standBg.Parent ~= standRoot then
+                            standBg = Instance.new("BodyGyro")
+                            standBg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                            standBg.P = 10000
+                            standBg.D = 100
+                            standBg.Parent = standRoot
+                        end
+                        standBg.CFrame = standTargetCFrame
+                        
+                        standRoot.CFrame = standTargetCFrame
+                        standRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    end
+                    
+                    if myRemote then
+                        pcall(function()
+                            myRemote:FireServer("HoldAttack", {Bool = true, Type = "m1"})
+                            myRemote:FireServer("HoldAttack", {Bool = false, Type = "m1"})
+                        end)
+                    end
+                    
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+MiscTab:Space()
+
+MiscTab:Button({
+    Title = "Stop Player Farming",
+    Callback = function()
+        getgenv().TWOHFarmEnabled = false
+        notify("YBA Script", "Player farming stopped!")
+        for _, cleanupFunc in pairs(getgenv().TWOHCleanupFunctions) do
+            task.spawn(cleanupFunc)
+        end
+        getgenv().TWOHCleanupFunctions = {}
+        task.wait(0.5)
+    end
+})
+
+do
+    local VirtualInputManager = game:GetService("VirtualInputManager")
+
+    getgenv().AutoPressKey = getgenv().AutoPressKey or nil
+    getgenv().AutoPressSpamDelay = getgenv().AutoPressSpamDelay or 0.03
+    getgenv().AutoPressLoopToken = (getgenv().AutoPressLoopToken or 0) + 1
+
+    local function tapSelectedKey()
+        local keyName = getgenv().AutoPressKey
+        if not keyName then return end
+
+        local keyCode = Enum.KeyCode[keyName]
+        if not keyCode then return end
+
+        VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+        task.wait(0.01)
+        VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+    end
+
+    getgenv().startAutoPressLoop = function()
+        getgenv().AutoPressLoopToken = getgenv().AutoPressLoopToken + 1
+        local myToken = getgenv().AutoPressLoopToken
+
+        task.spawn(function()
+            while myToken == getgenv().AutoPressLoopToken do
+                if getgenv().TWOHFarmEnabled and getgenv().AutoPressKey then
+                    pcall(tapSelectedKey)
+                    task.wait(getgenv().AutoPressSpamDelay) -- spam speed
+                else
+                    task.wait(0.1)
+                end
+            end
+        end)
+    end
+
+    startAutoPressLoop()
+
+    MiscTab:Dropdown({
         Flag = "AutoPressKeys",
         Title = "Auto Press Keys for Block Breaker",
         Values = { "None", "E", "Q", "R", "F", "G", "H", "T", "Y", "U", "I", "O", "P", "Z", "X", "C", "V", "B", "N", "M" },
@@ -1670,6 +1972,7 @@ MiscTab:Dropdown({
             getgenv().AutoPressSpamDelay = v
         end
     })
+end
 
 
 MiscTab:Space()
@@ -2804,6 +3107,7 @@ local viewToggle = TrollingTab:Toggle({
     Default = false,
     Callback = function(value)
         viewEnabled = value
+        if viewToggle2 then pcall(function() viewToggle2:Set(value) end) end
 if value then
 local stand = getStand()
 if not stand then
@@ -4072,7 +4376,7 @@ SettingsTab:Dropdown({
     Flag = "Theme Selector",
     Title = "Theme Selector",
     Default = "scrilisk theme",
-    Values = {"scrilisk theme", "kazakori theme"},
+    Values = {"scrilisk theme", "kazakori theme", "michaels theme"},
     Callback = function(selected)
         WindUI:SetTheme(selected)
     end
