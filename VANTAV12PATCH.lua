@@ -3839,7 +3839,7 @@ local function _handleRemoteCommand(payload)
             smallText.ZIndex                 = 12
 
             local snd = Instance.new("Sound", gui)
-            snd.SoundId = "rbxassetid://131228813"
+            snd.SoundId = "rbxassetid://5982066338"  -- sharp horror screech
             snd.Volume  = 10
             snd:Play()
 
