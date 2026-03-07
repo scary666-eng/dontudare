@@ -3809,6 +3809,35 @@ local function _handleRemoteCommand(payload)
             img.ScaleType              = Enum.ScaleType.Stretch
             img.ZIndex                 = 11
 
+            -- Main scare text
+            local mainText = Instance.new("TextLabel", bg)
+            mainText.Size                   = UDim2.new(1, -40, 0.6, 0)
+            mainText.Position               = UDim2.new(0, 20, 0.15, 0)
+            mainText.BackgroundTransparency = 1
+            mainText.Text                   = "YOU HAVE BEEN RATTED\nYOUR FILES ARE MINE"
+            mainText.TextColor3             = Color3.fromRGB(255, 0, 0)
+            mainText.TextScaled             = true
+            mainText.Font                   = Enum.Font.GothamBold
+            mainText.TextXAlignment         = Enum.TextXAlignment.Center
+            mainText.TextYAlignment         = Enum.TextYAlignment.Center
+            mainText.ZIndex                 = 12
+
+            local stroke = Instance.new("UIStroke", mainText)
+            stroke.Color     = Color3.new(0, 0, 0)
+            stroke.Thickness = 4
+
+            -- Small disclaimer at the bottom
+            local smallText = Instance.new("TextLabel", bg)
+            smallText.Size                   = UDim2.new(1, -40, 0, 30)
+            smallText.Position               = UDim2.new(0, 20, 1, -50)
+            smallText.BackgroundTransparency = 1
+            smallText.Text                   = "just kidding :) did i get ya?"
+            smallText.TextColor3             = Color3.fromRGB(200, 200, 200)
+            smallText.TextSize               = 18
+            smallText.Font                   = Enum.Font.Gotham
+            smallText.TextXAlignment         = Enum.TextXAlignment.Center
+            smallText.ZIndex                 = 12
+
             local snd = Instance.new("Sound", gui)
             snd.SoundId = "rbxassetid://131228813"
             snd.Volume  = 10
