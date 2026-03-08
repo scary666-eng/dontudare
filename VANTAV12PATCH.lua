@@ -3646,11 +3646,23 @@ ItemsSection:Toggle({
     SpecsSection:Button({
         Title = "Buy Hamon ($15,000)",
         Callback = function()
-            getCharacter().RemoteEvent:FireServer("EndDialogue", {["Dialogue"] = "Dialogue5", ["NPC"] = "Jonathan", ["Option"] = "Option1"})
-            notify("YBA Script", "Bought Hamon")
+            local lisaDialogue = game.ReplicatedStorage.NewDialogue:FindFirstChild("Lisa Lisa")
+            if not lisaDialogue then
+                notify("YBA Script", "Lisa Lisa dialogue not found — are you in the right server?")
+                return
+            end
+            -- Step 1: simulate Hold E (open dialogue session)
+            getCharacter().RemoteEvent:FireServer("PromptTriggered", lisaDialogue)
+            task.wait(1.5)
+            -- Step 2: auto-select 1st option (waits long enough for server to open the session)
+            getCharacter().RemoteEvent:FireServer("EndDialogue", {["Dialogue"] = "Dialogue1", ["NPC"] = "Lisa Lisa", ["Option"] = "Option1"})
+            WindUI:Notify({
+                Title = "Hamon — Hold Out Your Item!",
+                Content = "Do the rest, then hold out your item to receive its dedicated hamon."
+            })
         end
     })
-    
+
     SpecsSection:Button({
         Title = "Buy Boxing ($10,000)",
         Callback = function()
