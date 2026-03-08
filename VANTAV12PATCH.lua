@@ -4687,20 +4687,17 @@ end)
                         local isShiny = curShiny ~= "None" and curShiny ~= nil
                         local keepShiny = Util:GetState("Keep any shiny")
                         
-                        if keepShiny and isShiny then
+                        -- Always keep a stand that is in the selected list
+                        if isTarget then
+                            local msg = isShiny and ("Got target shiny! " .. curStand .. " (" .. curShiny .. ")") or ("Got stand: " .. curStand)
+                            notify("Stand Farm", msg)
+                            standFarmRunning = false
+                            StandFarmSettings:Set("StandFarm_Enabled", false)
+                            DisableNoclip()
+                            break
+                        -- Keep any shiny if that toggle is on (and stand is not already a selected target)
+                        elseif keepShiny and isShiny then
                             notify("Stand Farm", "Got shiny! " .. curStand .. " (" .. curShiny .. ")")
-                            standFarmRunning = false
-                            StandFarmSettings:Set("StandFarm_Enabled", false)
-                            DisableNoclip()
-                            break
-                        elseif isTarget and not keepShiny then
-                            notify("Stand Farm", "Got stand: " .. curStand)
-                            standFarmRunning = false
-                            StandFarmSettings:Set("StandFarm_Enabled", false)
-                            DisableNoclip()
-                            break
-                        elseif isTarget and isShiny and keepShiny then
-                            notify("Stand Farm", "Got target shiny! " .. curStand)
                             standFarmRunning = false
                             StandFarmSettings:Set("StandFarm_Enabled", false)
                             DisableNoclip()
@@ -5077,7 +5074,7 @@ end)
         Values = Util:GetTable("AllShinys"),
         Multi = true,
         Callback = function(selected)
-            Util:SetTable("Shinys", selected)
+            Util:SetTable("ShinyToggles", selected)
         end
     })
     
