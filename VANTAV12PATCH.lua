@@ -3584,7 +3584,7 @@ ItemsSection:Toggle({
     ItemsSection:Button({
         Title = "Buy Rib Cage ($3,500)",
         Callback = function()
-            getCharacter().RemoteEvent:FireServer("PurchaseShopItem", {["ItemName"] = "1x Rib Cage of The Saint's Corpse"}, 1, 2)
+            getCharacter().RemoteEvent:FireServer("PurchaseShopItem", {["ItemName"] = "1x Rib Cage of the Saint's Corpse"}, 1, 2)
             notify("YBA Script", "Bought Rib Cage")
         end
     })
@@ -3592,7 +3592,7 @@ ItemsSection:Toggle({
     ItemsSection:Button({
         Title = "Buy Left Arm ($15,000)",
         Callback = function()
-            getCharacter().RemoteEvent:FireServer("PurchaseShopItem", {["ItemName"] = "1x Left Arm of The Saint's Corpse"}, 1, 2)
+            getCharacter().RemoteEvent:FireServer("PurchaseShopItem", {["ItemName"] = "1x Left Arm of the Saint's Corpse"}, 1, 2)
             notify("YBA Script", "Bought Left Arm")
         end
     })
@@ -3600,7 +3600,7 @@ ItemsSection:Toggle({
     ItemsSection:Button({
         Title = "Buy Pelvis ($45,000)",
         Callback = function()
-            getCharacter().RemoteEvent:FireServer("PurchaseShopItem", {["ItemName"] = "1x Pelvis of The Saint's Corpse"}, 1, 2)
+            getCharacter().RemoteEvent:FireServer("PurchaseShopItem", {["ItemName"] = "1x Pelvis of the Saint's Corpse"}, 1, 2)
             notify("YBA Script", "Bought Pelvis")
         end
     })
@@ -3608,7 +3608,7 @@ ItemsSection:Toggle({
     ItemsSection:Button({
         Title = "Buy Heart ($45,000)",
         Callback = function()
-            getCharacter().RemoteEvent:FireServer("PurchaseShopItem", {["ItemName"] = "1x Heart of The Saint's Corpse"}, 1, 2)
+            getCharacter().RemoteEvent:FireServer("PurchaseShopItem", {["ItemName"] = "1x Heart of the Saint's Corpse"}, 1, 2)
             notify("YBA Script", "Bought Heart")
         end
     })
