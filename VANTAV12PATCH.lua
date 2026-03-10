@@ -6791,9 +6791,9 @@ getgenv().GetPlayerList = function()
     return playerNames
 end
 
-MiscTab:Dropdown({
+MiscTab:Input({
     Flag = "TWOHPlayerSelect",
-    Title = "Select Player to Hunt",
+    Title = "Select Player to Hunt (Case Sensitive)",
     SearchBarEnabled = true,
     Values = GetPlayerList(),
     Callback = function(selected)
