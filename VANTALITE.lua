@@ -56,6 +56,17 @@ pcall(function()
     Icon = Color3.fromHex("#fc027f"),
 })
 WindUI:AddTheme({
+    Name = "king crimson", -- theme name
+    
+    Accent = Color3.fromHex("#18181b"),
+    Background = Color3.fromHex("#130f0f"), -- Accent
+    Outline = Color3.fromHex("#e61106"),
+    Text = Color3.fromHex("#ff1e1e"),
+    Placeholder = Color3.fromHex("#313131"),
+    Button = Color3.fromHex("#f41111"),
+    Icon = Color3.fromHex("#fc0202"),
+})
+WindUI:AddTheme({
     Name = "kazakori theme", -- theme name
     
     -- example of gradient (available for all values. e.g. Button, Icon, Text...)   --
@@ -1695,11 +1706,10 @@ getgenv().GetPlayerList = function()
     return playerNames
 end
 
-MiscTab:Dropdown({
+MiscTab:Input({
     Flag = "TWOHPlayerSelect",
-    Title = "Select Player to Hunt",
-    SearchBarEnabled = true,
-    Values = GetPlayerList(),
+    Title = "Enter Player Name to Hunt",
+    Placeholder = "Type exact username...",
     Callback = function(selected)
         if not selected or selected == "" then
             getgenv().TWOHFarmEnabled = false
@@ -4376,7 +4386,7 @@ SettingsTab:Dropdown({
     Flag = "Theme Selector",
     Title = "Theme Selector",
     Default = "scrilisk theme",
-    Values = {"scrilisk theme", "kazakori theme", "michaels theme"},
+    Values = {"scrilisk theme", "kazakori theme", "michaels theme", "king crimson"},
     Callback = function(selected)
         WindUI:SetTheme(selected)
     end
