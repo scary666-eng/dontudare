@@ -568,7 +568,7 @@ local function attachToCar()
 
 	if not attached then
 		attached = true
-		Silicon:Notify({
+		WindUI:Notify({
 			Title = "Anti-Flip",
 			Content = "Anti-Flip has attached successfully."
 		})
@@ -990,7 +990,7 @@ VehicleTab:Toggle({
 	Callback = function(Value)
 		HighwayMode = Value
 		local msg = Value and "Highway Mode ON (X Band Disabled)" or "Highway Mode OFF (X Band Enabled)"
-		Silicon:Notify({
+		WindUI:Notify({
 			Title = "Radar",
 			Content = msg,
             Mute = true
@@ -1132,7 +1132,7 @@ VehicleTab:Toggle({
     Callback = function(state)
         angleTweakerEnabled = state
         updateVehicleFrictionAndSteering(state and angleTweakerValue or 1000, driftFriction)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "AngleTweaker",
             Content = state and "AngleTweaker has been enabled." or "AngleTweaker has been disabled."
         })
@@ -1263,13 +1263,13 @@ VehicleTab:Toggle({
             storeOriginalSprings()
             setAllSprings(2)
 
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Suspension Enabled",
                 Content = "Use the sliders to adjust your suspension."
             })
 
         else
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Suspension Disabled",
                 Content = "Suspension has been successfully disabled."
             })
@@ -1329,7 +1329,7 @@ VehicleTab:Button({
     Callback = function()
         if suspensionSliderEnabled then
             animateToOriginal()
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Suspension Reset",
                 Content = "All wheels restored to original."
             })
@@ -1546,7 +1546,7 @@ ECUTab:Slider({
         local carName = LocalPlayer.Name .. "-Car"
         local sessionVehicles = workspace:FindFirstChild("SessionVehicles")
         if not sessionVehicles then
-            Silicon:Notify({Title = "Error", Content = "SessionVehicles not found."})
+            WindUI:Notify({Title = "Error", Content = "SessionVehicles not found."})
             return
         end
         local car = sessionVehicles:FindFirstChild(carName)
@@ -1555,7 +1555,7 @@ ECUTab:Slider({
         end
         local tune = car:FindFirstChild("A-Chassis Tune")
         if not tune then
-            Silicon:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
+            WindUI:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
             return
         end
         local success, module = pcall(require, tune)
@@ -1565,7 +1565,7 @@ ECUTab:Slider({
             end
             module.PeakRPM = ecuPeakRPMInput
         else
-            Silicon:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
+            WindUI:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
         end
     end
 })
@@ -1589,19 +1589,19 @@ ECUTab:Button({
         end
         local tune=car:FindFirstChild("A-Chassis Tune")
         if not tune then
-            Silicon:Notify({Title="Error",Content="A-Chassis Tune not found."})
+            WindUI:Notify({Title="Error",Content="A-Chassis Tune not found."})
             return
         end
         local success,module=pcall(require,tune)
         if success and module and module.TransModes then
             if module.TransModes[1]=="Auto" and module.TransModes[2]=="Semi" and module.TransModes[3]=="Manual" then
-                Silicon:Notify({Title="Gearbox Unlocker",Content="The gearbox is already unlocked."})
+                WindUI:Notify({Title="Gearbox Unlocker",Content="The gearbox is already unlocked."})
             else
                 module.TransModes={"Auto","Semi","Manual"}
-                Silicon:Notify({Title="Gearbox Unlocker",Content="Gearbox unlocked successfully."})
+                WindUI:Notify({Title="Gearbox Unlocker",Content="Gearbox unlocked successfully."})
             end
         else
-            Silicon:Notify({Title="Error",Content="Failed to unlock gearbox."})
+            WindUI:Notify({Title="Error",Content="Failed to unlock gearbox."})
         end
     end
 })
@@ -1629,7 +1629,7 @@ VisualTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(value)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Camera Lock",
             Content = value and "Please don't leave me here :(" or "Camera Lock has been disabled."
         })
@@ -1906,7 +1906,7 @@ VisualTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(s)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Wheelie Mode",
             Content = s and "Wheelier is now active." or "Wheelier has been disabled."
         })
@@ -1923,7 +1923,7 @@ VisualTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(s)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Tilt Mode",
             Content = s and "Tilt Left is now active." or "Tilt Left has been disabled."
         })
@@ -1940,7 +1940,7 @@ VisualTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(s)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Tilt Mode",
             Content = s and "Tilt Right is now active." or "Tilt Right has been disabled."
         })
@@ -2266,7 +2266,7 @@ AutofarmTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(state)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Sahara Autofarm",
             Content = state and "Autofarm has been started successfully." or "Autofarm has been disabled."
         })
@@ -2458,7 +2458,7 @@ OtherTab:Toggle({
     Value = true,
     Callback = function(Value)
         Silicon.NotificationSoundEnabled = Value
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Notify System",
             Content = Value and "You will now recieve notification sounds." or "You will not recieve notification sounds.",
         })
@@ -2483,7 +2483,7 @@ OtherTab:Toggle({
                     table.insert(hiddenGUIs, gui)
                 end
             end
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "UI Hidden",
                 Content = "All non-Rayfield UI elements have been hidden."
             })
@@ -2494,7 +2494,7 @@ OtherTab:Toggle({
                 end
             end
             hiddenGUIs = {}
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "UI Restored",
                 Content = "Previously hidden UIs have been re-enabled."
             })
@@ -2543,7 +2543,7 @@ OtherTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(state)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "FPS",
             Content = state and "FPS Unlocker has been enabled." or "FPS Unlocker has been disabled."
         })
@@ -2629,7 +2629,7 @@ OtherTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(state)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "FPS",
             Content = state and "FPS Visuals has been enabled." or "FPS Visuals has been disabled."
         })
