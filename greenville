@@ -27,7 +27,7 @@ local allowedExecutors = {
 }
 
 if not allowedExecutors[executorName] then
-    player:Kick("Bad Executor, please get a better one.\nhttps://siliconxploits.xyz/#/executors")
+    player:Kick("Bad Executor")
 end	
 
 local Silicon = loadstring(game:HttpGet("https://pastebin.com/raw/DsBH9hnF"))()
@@ -124,12 +124,12 @@ UserTab:Input({
         end)
         if success and label and label:IsA("TextLabel") then
             label.Text = formatted
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Fake Money",
                 Content = "Set your bank balance to: " .. formatted
             })
         else
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Error",
                 Content = "Could not find the money label."
             })
@@ -150,12 +150,12 @@ UserTab:Input({
         local targetPlayer = game.Players:FindFirstChild(spectatePlayer)
         if targetPlayer then
             game.Workspace.CurrentCamera.CameraSubject = targetPlayer.Character:FindFirstChild("Humanoid")
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Spectating",
                 Content = "You are now spectating the chosen player."
             })
         else
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Spectate Error",
                 Content = "Player not found!"
             })
@@ -183,12 +183,12 @@ UserTab:Input({
 
             label.Text = text
 
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Nametag Editor",
                 Content = "Set your nametag to " .. label.Text
             })
         else
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Error",
                 Content = "Nametags are not enabled in this server."
             })
@@ -205,7 +205,7 @@ UserTab:Toggle({
     Value = false,
     Callback = function(value)
         if value then
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Nametags",
                 Content = "Your nametag has been removed."
             })
@@ -247,7 +247,7 @@ UserTab:Toggle({
                 end
             end
 
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Nametags",
                 Content = "Your nametag has been restored."
             })
@@ -266,7 +266,7 @@ UserTab:Toggle({
     Value = false,
     Callback = function(Value)
         noclipEnabled = Value
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "NoClip",
             Content = Value and "NoClip has been enabled." or "NoClip has been disabled."
         })
@@ -297,7 +297,7 @@ local rs = game:GetService("ReplicatedStorage")
 VehicleTab:Button({
     Title = "Refuel Vehicle",
     Callback = function()
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Vehicle Refuel",
             Content = "Your vehicle has been successfully refueled."
         })
@@ -316,7 +316,7 @@ VehicleTab:Toggle({
     Type = "Toggle",
     Value = false, 
     Callback = function(enabled)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Strobes",
             Content = enabled and "Strobes have now been activated." or "Strobes have now been deactivated."
         })
@@ -343,7 +343,7 @@ VehicleTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(enabled)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Tire Spam",
             Content = enabled and "Spamming has now been activated." or "Spamming has now been deactivated."
         })
@@ -396,7 +396,7 @@ VehicleTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(enabled)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Snow Spam",
             Content = enabled and "Spamming has now been activated." or "Spamming has now been deactivated."
         })
@@ -568,7 +568,7 @@ local function attachToCar()
 
 	if not attached then
 		attached = true
-		Silicon:Notify({
+		WindUI:Notify({
 			Title = "Anti-Flip",
 			Content = "Anti-Flip has attached successfully."
 		})
@@ -628,7 +628,7 @@ VehicleTab:Toggle({
 			enableAntiFlipLoop()
 		else
 			if tiltGyro then tiltGyro:Destroy() tiltGyro = nil end
-            Silicon:Notify({
+            WindUI:Notify({
 			    Title = "Anti-Flip",
 			    Content = "Anti-Flip has disconnected successfully."
 		    })
@@ -725,12 +725,12 @@ VehicleTab:Toggle({
     Value = false,
     Callback = function(state)
         if state then
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Lowrider Bounce",
                 Content = "Lowrider Bounce has been enabled."
             })
         else
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Lowrider Bounce",
                 Content = "Lowrider Bounce has been disabled."
             })
@@ -774,12 +774,12 @@ VehicleTab:Toggle({
     Callback = function(state)
         autoSeatEnabled = state
         if state then
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Vehicle Unlocker",
                 Content = "Vehicle Unlocker has been enabled, don't get caught!"
             })
         else
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Vehicle Unlocker",
                 Content = "Vehicle Unlocker has been disabled."
             })
@@ -817,7 +817,7 @@ local function TrySitVehicleSeat()
         Humanoid.Sit = false
         task.wait(0.1)
         closestVehicleSeat:Sit(Humanoid)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Vehicle Unlocker",
             Content = "Are- you in someones car? Is it yours?"
         })
@@ -862,7 +862,7 @@ local soundX = createSound(XBand)
 local selfTestSound = createSound(SelfTestSoundId)
 
 local function SelfTest()
-    Silicon:Notify({
+    WindUI:Notify({
         Title = "Radar",
         Content = "Self Test Ongoing",
         Mute = true
@@ -870,7 +870,7 @@ local function SelfTest()
     selfTestSound.TimePosition = 0
     selfTestSound:Play()
     task.wait(9)
-    Silicon:Notify({
+    WindUI:Notify({
         Title = "Radar",
         Content = "Radar has been activated.",
         Mute = true
@@ -882,7 +882,7 @@ local function ToggleRadar(enabled)
     if RadarEnabled then
         task.spawn(SelfTest)
     else
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Radar",
             Content = "Radar has been deactivated.",
             Mute = true
@@ -915,7 +915,7 @@ task.spawn(function()
                         local camPos = cam:IsA("Model") and cam:GetPivot().Position or cam.Position
                         local distance = (camPos - localHRP.Position).Magnitude
                         if distance <= DetectionDistance then
-                            Silicon:Notify({
+                            WindUI:Notify({
                                 Title = "Radar Alert!",
                                 Content = "Traffic Camera detected within " .. math.floor(distance) .. " studs! (K BAND)",
                                 Mute = true
@@ -931,7 +931,7 @@ task.spawn(function()
                     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                         local distance = (player.Character.HumanoidRootPart.Position - localHRP.Position).Magnitude
                         if distance <= DetectionDistance then
-                            Silicon:Notify({
+                            WindUI:Notify({
                                 Title = "Radar Alert!",
                                 Content = player.Name .. " (" .. player.Team.Name .. ") detected within " .. math.floor(distance) .. " studs! (KA BAND)",
                                 Mute = true
@@ -990,7 +990,7 @@ VehicleTab:Toggle({
 	Callback = function(Value)
 		HighwayMode = Value
 		local msg = Value and "Highway Mode ON (X Band Disabled)" or "Highway Mode OFF (X Band Enabled)"
-		Silicon:Notify({
+		WindUI:Notify({
 			Title = "Radar",
 			Content = msg,
             Mute = true
@@ -1102,7 +1102,7 @@ VehicleTab:Toggle({
     Callback = function(state)
         driftEnabled = state
         updateVehicleFrictionAndSteering(angleTweakerEnabled and angleTweakerValue or 1000, state and driftFriction or 0.7)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Custom Grip",
             Content = state and "Custom Grip has been enabled." or "Custom Grip has been disabled."
         })
@@ -1132,7 +1132,7 @@ VehicleTab:Toggle({
     Callback = function(state)
         angleTweakerEnabled = state
         updateVehicleFrictionAndSteering(state and angleTweakerValue or 1000, driftFriction)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "AngleTweaker",
             Content = state and "AngleTweaker has been enabled." or "AngleTweaker has been disabled."
         })
@@ -1253,7 +1253,7 @@ VehicleTab:Toggle({
         if suspensionSliderEnabled then
             local Wheels = getPlayerCarWheels()
             if not Wheels then
-                Silicon:Notify({
+                WindUI:Notify({
                     Title = "No Vehicle Found",
                     Content = "Please spawn your vehicle first."
                 })
@@ -1263,13 +1263,13 @@ VehicleTab:Toggle({
             storeOriginalSprings()
             setAllSprings(2)
 
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Suspension Enabled",
                 Content = "Use the sliders to adjust your suspension."
             })
 
         else
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Suspension Disabled",
                 Content = "Suspension has been successfully disabled."
             })
@@ -1329,7 +1329,7 @@ VehicleTab:Button({
     Callback = function()
         if suspensionSliderEnabled then
             animateToOriginal()
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Suspension Reset",
                 Content = "All wheels restored to original."
             })
@@ -1377,7 +1377,7 @@ ECUTab:Dropdown({
         local carName = LocalPlayer.Name .. "-Car"
         local sessionVehicles = workspace:FindFirstChild("SessionVehicles")
         if not sessionVehicles then
-            Silicon:Notify({Title = "Error", Content = "SessionVehicles not found."})
+            WindUI:Notify({Title = "Error", Content = "SessionVehicles not found."})
             return
         end
 
@@ -1388,7 +1388,7 @@ ECUTab:Dropdown({
 
         local tune = car:FindFirstChild("A-Chassis Tune")
         if not tune then
-            Silicon:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
+            WindUI:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
             return
         end
 
@@ -1401,12 +1401,12 @@ ECUTab:Dropdown({
             module.Config.Drivetrain = selected
             currentDrivetrain = selected
 
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "Drivetrain Changed",
                 Content = "Drivetrain set to " .. selected .. "."
             })
         else
-            Silicon:Notify({Title = "Error", Content = "Failed to set drivetrain."})
+            WindUI:Notify({Title = "Error", Content = "Failed to set drivetrain."})
         end
     end
 })
@@ -1423,7 +1423,7 @@ ECUTab:Input({
             local carName = LocalPlayer.Name .. "-Car"
             local sessionVehicles = workspace:FindFirstChild("SessionVehicles")
             if not sessionVehicles then
-                Silicon:Notify({Title = "Error", Content = "SessionVehicles not found."})
+                WindUI:Notify({Title = "Error", Content = "SessionVehicles not found."})
                 return
             end
             local car = sessionVehicles:FindFirstChild(carName)
@@ -1432,7 +1432,7 @@ ECUTab:Input({
             end
             local tune = car:FindFirstChild("A-Chassis Tune")
             if not tune then
-                Silicon:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
+                WindUI:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
                 return
             end
 
@@ -1443,9 +1443,9 @@ ECUTab:Input({
                 end
                 module.Horsepower = ecuHorsepowerInput
                 module.E_Horsepower = ecuHorsepowerInput
-                Silicon:Notify({Title = "Success", Content = "Horsepower set to: " .. ecuHorsepowerInput})
+                WindUI:Notify({Title = "Success", Content = "Horsepower set to: " .. ecuHorsepowerInput})
             else
-                Silicon:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
+                WindUI:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
             end
         end
     end
@@ -1466,7 +1466,7 @@ ECUTab:Input({
         local carName = LocalPlayer.Name .. "-Car"
         local sessionVehicles = workspace:FindFirstChild("SessionVehicles")
         if not sessionVehicles then
-            Silicon:Notify({Title = "Error", Content = "SessionVehicles not found."})
+            WindUI:Notify({Title = "Error", Content = "SessionVehicles not found."})
             return
         end
         local car = sessionVehicles:FindFirstChild(carName)
@@ -1475,7 +1475,7 @@ ECUTab:Input({
         end
         local tune = car:FindFirstChild("A-Chassis Tune")
         if not tune then
-            Silicon:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
+            WindUI:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
             return
         end
 
@@ -1485,9 +1485,9 @@ ECUTab:Input({
                 ecuDefaultFinalDrive = module.FinalDrive
             end
             module.FinalDrive = ecuFinalDriveInput
-            Silicon:Notify({Title = "Success", Content = "Final Drive set to: " .. string.format("%.3f", ecuFinalDriveInput)})
+            WindUI:Notify({Title = "Success", Content = "Final Drive set to: " .. string.format("%.3f", ecuFinalDriveInput)})
         else
-            Silicon:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
+            WindUI:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
         end
     end
 })
@@ -1507,7 +1507,7 @@ ECUTab:Slider({
         local carName = LocalPlayer.Name .. "-Car"
         local sessionVehicles = workspace:FindFirstChild("SessionVehicles")
         if not sessionVehicles then
-            Silicon:Notify({Title = "Error", Content = "SessionVehicles not found."})
+            WindUI:Notify({Title = "Error", Content = "SessionVehicles not found."})
             return
         end
         local car = sessionVehicles:FindFirstChild(carName)
@@ -1516,7 +1516,7 @@ ECUTab:Slider({
         end
         local tune = car:FindFirstChild("A-Chassis Tune")
         if not tune then
-            Silicon:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
+            WindUI:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
             return
         end
         local success, module = pcall(require, tune)
@@ -1526,7 +1526,7 @@ ECUTab:Slider({
             end
             module.Redline = ecuRedlineInput
         else
-            Silicon:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
+            WindUI:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
         end
     end
 })
@@ -1546,7 +1546,7 @@ ECUTab:Slider({
         local carName = LocalPlayer.Name .. "-Car"
         local sessionVehicles = workspace:FindFirstChild("SessionVehicles")
         if not sessionVehicles then
-            Silicon:Notify({Title = "Error", Content = "SessionVehicles not found."})
+            WindUI:Notify({Title = "Error", Content = "SessionVehicles not found."})
             return
         end
         local car = sessionVehicles:FindFirstChild(carName)
@@ -1555,7 +1555,7 @@ ECUTab:Slider({
         end
         local tune = car:FindFirstChild("A-Chassis Tune")
         if not tune then
-            Silicon:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
+            WindUI:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
             return
         end
         local success, module = pcall(require, tune)
@@ -1565,7 +1565,7 @@ ECUTab:Slider({
             end
             module.PeakRPM = ecuPeakRPMInput
         else
-            Silicon:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
+            WindUI:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
         end
     end
 })
@@ -1580,7 +1580,7 @@ ECUTab:Button({
         local carName=LocalPlayer.Name.."-Car"
         local sessionVehicles=workspace:FindFirstChild("SessionVehicles")
         if not sessionVehicles then
-            Silicon:Notify({Title="Error",Content="SessionVehicles not found."})
+            WindUI:Notify({Title="Error",Content="SessionVehicles not found."})
             return
         end
         local car=sessionVehicles:FindFirstChild(carName)
@@ -1589,19 +1589,19 @@ ECUTab:Button({
         end
         local tune=car:FindFirstChild("A-Chassis Tune")
         if not tune then
-            Silicon:Notify({Title="Error",Content="A-Chassis Tune not found."})
+            WindUI:Notify({Title="Error",Content="A-Chassis Tune not found."})
             return
         end
         local success,module=pcall(require,tune)
         if success and module and module.TransModes then
             if module.TransModes[1]=="Auto" and module.TransModes[2]=="Semi" and module.TransModes[3]=="Manual" then
-                Silicon:Notify({Title="Gearbox Unlocker",Content="The gearbox is already unlocked."})
+                WindUI:Notify({Title="Gearbox Unlocker",Content="The gearbox is already unlocked."})
             else
                 module.TransModes={"Auto","Semi","Manual"}
-                Silicon:Notify({Title="Gearbox Unlocker",Content="Gearbox unlocked successfully."})
+                WindUI:Notify({Title="Gearbox Unlocker",Content="Gearbox unlocked successfully."})
             end
         else
-            Silicon:Notify({Title="Error",Content="Failed to unlock gearbox."})
+            WindUI:Notify({Title="Error",Content="Failed to unlock gearbox."})
         end
     end
 })
@@ -1629,7 +1629,7 @@ VisualTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(value)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Camera Lock",
             Content = value and "Please don't leave me here :(" or "Camera Lock has been disabled."
         })
@@ -1906,7 +1906,7 @@ VisualTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(s)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Wheelie Mode",
             Content = s and "Wheelier is now active." or "Wheelier has been disabled."
         })
@@ -1923,7 +1923,7 @@ VisualTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(s)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Tilt Mode",
             Content = s and "Tilt Left is now active." or "Tilt Left has been disabled."
         })
@@ -1940,7 +1940,7 @@ VisualTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(s)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Tilt Mode",
             Content = s and "Tilt Right is now active." or "Tilt Right has been disabled."
         })
@@ -2266,7 +2266,7 @@ AutofarmTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(state)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Sahara Autofarm",
             Content = state and "Autofarm has been started successfully." or "Autofarm has been disabled."
         })
@@ -2334,7 +2334,7 @@ local function startChecking()
             if money >= SelectedAmount then
                 getgenv().AmazonDelivery = false
                 getgenv().RoadmapRunning = false
-                player:Kick("Silicon | Farming Finished")
+                player:Kick("VANTA | Farming Finished")
                 Checking = false
                 break
             end
@@ -2370,12 +2370,12 @@ AutofarmTab:Toggle({
        
        if Value then
            if #Players:GetPlayers() > 1 then
-               LocalPlayer:Kick("Silicon Protect | Another User Joined.")
+               LocalPlayer:Kick("VANTA Protect | Another User Joined.")
            end
 
            Players.PlayerAdded:Connect(function(player)
                if AutoKickToggle.CurrentValue then
-                   LocalPlayer:Kick("Silicon Protect | Another User Joined.")
+                   LocalPlayer:Kick("VANTA Protect | Another User Joined.")
                end
            end)
        end
@@ -2458,7 +2458,7 @@ OtherTab:Toggle({
     Value = true,
     Callback = function(Value)
         Silicon.NotificationSoundEnabled = Value
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "Notify System",
             Content = Value and "You will now recieve notification sounds." or "You will not recieve notification sounds.",
         })
@@ -2483,9 +2483,9 @@ OtherTab:Toggle({
                     table.insert(hiddenGUIs, gui)
                 end
             end
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "UI Hidden",
-                Content = "All non-Rayfield UI elements have been hidden."
+                Content = "All UI elements have been hidden."
             })
         else
             for _, gui in ipairs(hiddenGUIs) do
@@ -2494,7 +2494,7 @@ OtherTab:Toggle({
                 end
             end
             hiddenGUIs = {}
-            Silicon:Notify({
+            WindUI:Notify({
                 Title = "UI Restored",
                 Content = "Previously hidden UIs have been re-enabled."
             })
@@ -2543,7 +2543,7 @@ OtherTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(state)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "FPS",
             Content = state and "FPS Unlocker has been enabled." or "FPS Unlocker has been disabled."
         })
@@ -2629,7 +2629,7 @@ OtherTab:Toggle({
     Type = "Toggle",
     Value = false,
     Callback = function(state)
-        Silicon:Notify({
+        WindUI:Notify({
             Title = "FPS",
             Content = state and "FPS Visuals has been enabled." or "FPS Visuals has been disabled."
         })
