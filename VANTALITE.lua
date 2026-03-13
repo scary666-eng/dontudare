@@ -1709,6 +1709,8 @@ end
 MiscTab:Input({
     Flag = "TWOHPlayerSelect",
     Title = "Enter Player Name to Hunt",
+    Locked = true,
+    LockedTitle = "PREMIUM ONLY",
     Placeholder = "Type exact username...",
     Callback = function(selected)
         if not selected or selected == "" then
