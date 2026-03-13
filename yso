@@ -744,7 +744,27 @@ MiscTab:Toggle({
 })
 
 
-
+    MiscTab:Button({
+    Title = "Toggle other ignition",
+    Desc = "Turns on the ignition for the car whose seat you're sitting in.",
+    Icon = "power",
+    Callback = function()
+        local p = game:GetService("Players").LocalPlayer
+        local h = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+        local s = h and h.SeatPart
+        if s and s:IsA("VehicleSeat") then
+            local v = s:FindFirstAncestorOfClass("Model")
+            if v and workspace:WaitForChild("Vehicles"):FindFirstChild(v.Name) then
+                workspace.Vehicles[v.Name]:WaitForChild("IgnitionEvent"):FireServer("start")
+                Notify({ Title = "Ignition", Content = "Ignition event fired for " .. v.Name, Duration = 3 })
+            else
+                Notify({ Title = "Ignition", Content = "Vehicle not found!", Duration = 3 })
+            end
+        else
+            Notify({ Title = "Ignition", Content = "You are not sitting in a seat!", Duration = 3 })
+        end
+    end,
+})
 
 -- Lowrider Bounce Toggle
 local lowriderToggle = false
@@ -859,28 +879,6 @@ MiscTab:Button({
     Callback = function()
         ApplyAll(Data)
         Notify({ Title = "Vehicle Modifier", Content = "All settings re-applied!", Duration = 3 })
-    end,
-})
-
-    MiscTab:Button({
-    Title = "Toggle other ignition",
-    Desc = "Turns on the ignition for the car whose seat you're sitting in.",
-    Icon = "power",
-    Callback = function()
-        local p = game:GetService("Players").LocalPlayer
-        local h = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
-        local s = h and h.SeatPart
-        if s and s:IsA("VehicleSeat") then
-            local v = s:FindFirstAncestorOfClass("Model")
-            if v and workspace:WaitForChild("Vehicles"):FindFirstChild(v.Name) then
-                workspace.Vehicles[v.Name]:WaitForChild("IgnitionEvent"):FireServer("start")
-                Notify({ Title = "Ignition", Content = "Ignition event fired for " .. v.Name, Duration = 3 })
-            else
-                Notify({ Title = "Ignition", Content = "Vehicle not found!", Duration = 3 })
-            end
-        else
-            Notify({ Title = "Ignition", Content = "You are not sitting in a seat!", Duration = 3 })
-        end
     end,
 })
 
