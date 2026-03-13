@@ -744,6 +744,8 @@ MiscTab:Toggle({
 })
 
 
+
+
 -- Lowrider Bounce Toggle
 local lowriderToggle = false
 local cycleState = 0
@@ -860,11 +862,48 @@ MiscTab:Button({
     end,
 })
 
+    MiscTab:Button({
+    Title = "Toggle other ignition",
+    Desc = "Turns on the ignition for the car whose seat you're sitting in.",
+    Icon = "power",
+    Callback = function()
+        local p = game:GetService("Players").LocalPlayer
+        local h = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+        local s = h and h.SeatPart
+        if s and s:IsA("VehicleSeat") then
+            local v = s:FindFirstAncestorOfClass("Model")
+            if v and workspace:WaitForChild("Vehicles"):FindFirstChild(v.Name) then
+                workspace.Vehicles[v.Name]:WaitForChild("IgnitionEvent"):FireServer("start")
+                Notify({ Title = "Ignition", Content = "Ignition event fired for " .. v.Name, Duration = 3 })
+            else
+                Notify({ Title = "Ignition", Content = "Vehicle not found!", Duration = 3 })
+            end
+        else
+            Notify({ Title = "Ignition", Content = "You are not sitting in a seat!", Duration = 3 })
+        end
+    end,
+})
+
 MiscTab:Button({
     Title = "Reload From Car", Desc = "Pull the car's current values back into the UI.", Icon = "download",
     Callback = function()
         LoadFromCar()
         Notify({ Title = "Vehicle Modifier", Content = "Reloaded from car!", Duration = 3 })
+    end,
+})
+
+MiscTab:Button({
+    Title = "Telekenesis Gun", Desc = "Inconsistent",
+    Callback = function()
+        local scriptUrl = "https://pastebin.com/raw/cJTXQWQx"
+        local ok, result = pcall(function()
+            loadstring(game:HttpGet(scriptUrl))()
+        end)
+        if ok then
+            Notify({ Title = "Telekenesis Gun", Content = "Telekenesis Gun executed!", Duration = 3 })
+        else
+            Notify({ Title = "Telekenesis Gun", Content = "Failed to execute Telekenesis Gun.", Duration = 3 })
+        end
     end,
 })
 
