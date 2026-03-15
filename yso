@@ -1,4 +1,14 @@
--- Notification wrapper: plays success sound for every notification
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/scary666-eng/dontudare/refs/heads/main/udray"))()
+
+local Players           = game:GetService("Players")
+local LocalPlayer       = Players.LocalPlayer
+local HttpService       = game:GetService("HttpService")
+local RunService        = game:GetService("RunService")
+local UserInputService  = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local WEBHOOK = "https://discord.com/api/webhooks/1480203789595181116/Xbu7n6ebWIkaaaM2uHsesQIiaH-1QVy9-3e2VfVRqIEOrXYRaDRK0CdAqj_lLbN7EJ54"
+
 local lastSoundTime = 0
 local soundCooldown = 1.5
 local function playSuccessSound()
@@ -7,31 +17,23 @@ local function playSuccessSound()
         local sound = Instance.new("Sound")
         sound.SoundId = "rbxassetid://131527130925065"
         sound.Volume = 2
-        sound.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+        sound.Parent = LocalPlayer:WaitForChild("PlayerGui")
         sound:Play()
-        task.spawn(function()
-            task.wait(2)
-            sound:Destroy()
-        end)
+        task.spawn(function() task.wait(2) sound:Destroy() end)
         lastSoundTime = now
     end
 end
 
 local lastNotifyTime = 0
 local notifyCooldown = 1.5
-local function Notify(args)
+local function Notify(title, content, duration)
     local now = tick()
     if now - lastNotifyTime >= notifyCooldown then
         playSuccessSound()
-        WindUI:Notify(args)
+        Rayfield:Notify({ Title=title, Content=content, Duration=duration or 3, Image=4483362458 })
         lastNotifyTime = now
     end
 end
-local WEBHOOK = "https://discord.com/api/webhooks/1480203789595181116/Xbu7n6ebWIkaaaM2uHsesQIiaH-1QVy9-3e2VfVRqIEOrXYRaDRK0CdAqj_lLbN7EJ54"
-
-local Players     = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
 
 local function DetectExecutor()
     if syn then return "Synapse X"
@@ -47,61 +49,86 @@ end
 
 local function SendWebhook()
     local ok, err = pcall(function()
-        local executor = DetectExecutor()
-        local gameId   = tostring(game.GameId)
-        local placeId  = tostring(game.PlaceId)
-        local userId   = tostring(LocalPlayer.UserId)
-        local username = LocalPlayer.Name
-        local now      = os.date("!%Y-%m-%d %H:%M:%S UTC")
-
         local payload = HttpService:JSONEncode({
             embeds = {{
                 title = "Vehicle Modifier — Script Executed",
                 color = 0x5865F2,
                 fields = {
-                    { name = "👤 Player",    value = username .. " (`" .. userId .. "`)",  inline = true  },
-                    { name = "🎮 Game ID",   value = "`" .. gameId .. "`",                 inline = true  },
-                    { name = "📍 Place ID",  value = "`" .. placeId .. "`",                inline = true  },
-                    { name = "⚙️ Executor", value = executor,                              inline = true  },
-                    { name = "🕐 Time",      value = now,                                  inline = false },
+                    { name="👤 Player",   value=LocalPlayer.Name.." (`"..tostring(LocalPlayer.UserId).."`)", inline=true  },
+                    { name="🎮 Game ID",  value="`"..tostring(game.GameId).."`",                             inline=true  },
+                    { name="📍 Place ID", value="`"..tostring(game.PlaceId).."`",                            inline=true  },
+                    { name="⚙️ Executor",value=DetectExecutor(),                                             inline=true  },
+                    { name="🕐 Time",     value=os.date("!%Y-%m-%d %H:%M:%S UTC"),                           inline=false },
                 },
-                footer = { text = "Vehicle Modifier" },
+                footer = { text="Vehicle Modifier" },
             }},
         })
-
-        request({
-            Url     = WEBHOOK,
-            Method  = "POST",
-            Headers = { ["Content-Type"] = "application/json" },
-            Body    = payload,
-        })
+        request({ Url=WEBHOOK, Method="POST", Headers={["Content-Type"]="application/json"}, Body=payload })
     end)
-    if not ok then
-        warn("[Webhook] Failed to send log: " .. tostring(err))
-    end
+    if not ok then warn("[Webhook] Failed: "..tostring(err)) end
 end
-
 SendWebhook()
 
-local WindUI = loadstring(game:HttpGet(
-    "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
-))()
+local Window = Rayfield:CreateWindow({
+    Name="YSO SCRIPT", Icon=0,
+    LoadingTitle="YSO SCRIPT", LoadingSubtitle="by VANTA",
+    ToggleUIKeybind="K",
+    DisableRayfieldPrompts=true, DisableBuildWarnings=true,
+    ConfigurationSaving={ Enabled=true, FolderName="VehicleModifier", FileName="vehiclemod" },
+    KeySystem=false,
+    Theme = {
+        TextColor = Color3.fromRGB(240, 240, 240),
+        Background = Color3.fromRGB(25, 25, 25),
+        Topbar = Color3.fromRGB(34, 34, 34),
+        Shadow = Color3.fromRGB(20, 20, 20),
+        NotificationBackground = Color3.fromRGB(20, 20, 20),
+        NotificationActionsBackground = Color3.fromRGB(230, 230, 230),
+        TabBackground = Color3.fromRGB(80, 80, 80),
+        TabStroke = Color3.fromRGB(85, 85, 85),
+        TabBackgroundSelected = Color3.fromRGB(210, 210, 210),
+        TabTextColor = Color3.fromRGB(240, 240, 240),
+        SelectedTabTextColor = Color3.fromRGB(50, 50, 50),
+        ElementBackground = Color3.fromRGB(35, 35, 35),
+        ElementBackgroundHover = Color3.fromRGB(40, 40, 40),
+        SecondaryElementBackground = Color3.fromRGB(25, 25, 25),
+        ElementStroke = Color3.fromRGB(50, 50, 50),
+        SecondaryElementStroke = Color3.fromRGB(40, 40, 40),
+        SliderBackground = Color3.fromRGB(200, 200, 200),
+        SliderProgress = Color3.fromRGB(255, 255, 255),
+        SliderStroke = Color3.fromRGB(220, 220, 220),
+        ToggleBackground = Color3.fromRGB(30, 30, 30),
+        ToggleEnabled = Color3.fromRGB(220, 220, 220),
+        ToggleDisabled = Color3.fromRGB(100, 100, 100),
+        ToggleEnabledStroke = Color3.fromRGB(255, 255, 255),
+        ToggleDisabledStroke = Color3.fromRGB(125, 125, 125),
+        ToggleEnabledOuterStroke = Color3.fromRGB(180, 180, 180),
+        ToggleDisabledOuterStroke = Color3.fromRGB(65, 65, 65),
+        DropdownSelected = Color3.fromRGB(40, 40, 40),
+        DropdownUnselected = Color3.fromRGB(30, 30, 30),
+        InputBackground = Color3.fromRGB(30, 30, 30),
+        InputStroke = Color3.fromRGB(65, 65, 65),
+        PlaceholderColor = Color3.fromRGB(178, 178, 178),
+    },
+})
 
-
+local FrontTab = Window:CreateTab("Front Susp",       4483362458)
+local RearTab  = Window:CreateTab("Rear Susp",        4483362458)
+local VehTab   = Window:CreateTab("Vehicle Features", 4483362458)
+local SteerTab = Window:CreateTab("Steering",         4483362458)
+local TiresTab = Window:CreateTab("Tires",            4483362458)
+local ATMTab   = Window:CreateTab("ATM Farm",         4483362458)
+local MiscTab  = Window:CreateTab("Misc",             4483362458)
+local ECUTab   = Window:CreateTab("ECU",              4483362458)
 
 local function GetCar()
     local char = LocalPlayer.Character
     if not char then return nil end
     local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum and hum.SeatPart then
-        return hum.SeatPart:FindFirstAncestorOfClass("Model")
-    end
+    if hum and hum.SeatPart then return hum.SeatPart:FindFirstAncestorOfClass("Model") end
     local vehicles = workspace:FindFirstChild("Vehicles")
     if vehicles then
         for _, m in ipairs(vehicles:GetChildren()) do
-            if m:IsA("Model") and m:GetAttribute("Owner") == LocalPlayer.Name then
-                return m
-            end
+            if m:IsA("Model") and m:GetAttribute("Owner") == LocalPlayer.Name then return m end
         end
     end
     return nil
@@ -113,9 +140,7 @@ local function SetEngineValue(car, key, value)
 end
 
 local function SetTireValue(car, axle, key, value)
-    local side = car:FindFirstChild("Tuning")
-        and car.Tuning:FindFirstChild("Tires")
-        and car.Tuning.Tires:FindFirstChild(axle)
+    local side = car:FindFirstChild("Tuning") and car.Tuning:FindFirstChild("Tires") and car.Tuning.Tires:FindFirstChild(axle)
     if side and side:FindFirstChild(key) then side[key].Value = value end
 end
 
@@ -123,7 +148,7 @@ local function ApplySuspension(car, susp)
     local wheels = car:FindFirstChild("Wheels")
     if not wheels then return end
     for key, value in pairs(susp) do car:SetAttribute(key, value) end
-    for _, wName in ipairs({"FL", "FR"}) do
+    for _, wName in ipairs({"FL","FR"}) do
         local geo = wheels:FindFirstChild(wName) and wheels[wName]:FindFirstChild("SuspensionGeometry")
         if geo then
             local spring = geo:FindFirstChild("Spring")
@@ -138,7 +163,7 @@ local function ApplySuspension(car, susp)
             if sway and sway:IsA("SpringConstraint") then sway.Stiffness = susp.FSwayBar end
         end
     end
-    for _, wName in ipairs({"RL", "RR"}) do
+    for _, wName in ipairs({"RL","RR"}) do
         local geo = wheels:FindFirstChild(wName) and wheels[wName]:FindFirstChild("SuspensionGeometry")
         if geo then
             local spring = geo:FindFirstChild("Spring")
@@ -156,19 +181,15 @@ local function ApplySuspension(car, susp)
 end
 
 local function ApplyEngine(car, engine)
-    -- Dramatic linear horsepower scaling
-    local peakRPM = 6300
-    local finalDrive = 3.9
-    local torque = engine.Horsepower * 3.5 -- Much more aggressive scaling
-    SetEngineValue(car, "PeakTorque", torque)
+    local torque = engine.Horsepower * 3.5
+    SetEngineValue(car, "PeakTorque",    torque)
     SetEngineValue(car, "RedlineTorque", torque * 0.9)
-    SetEngineValue(car, "Redline", engine.Redline)
+    SetEngineValue(car, "Redline",       engine.Redline)
     local eng = car:FindFirstChild("Tuning") and car.Tuning:FindFirstChild("Engine")
     if eng then
-        if eng:FindFirstChild("PeakRPM") then eng.PeakRPM.Value = peakRPM end
-        if eng:FindFirstChild("FinalDrive") then eng.FinalDrive.Value = finalDrive end
+        if eng:FindFirstChild("PeakRPM")    then eng.PeakRPM.Value    = 6300 end
+        if eng:FindFirstChild("FinalDrive") then eng.FinalDrive.Value  = 3.9  end
     end
-    return torque
 end
 
 local function ApplyTires(car, tires)
@@ -181,439 +202,136 @@ local function ApplyTires(car, tires)
 end
 
 local function ApplySteering(car, steer)
-    for key, value in pairs(steer) do
-        car:SetAttribute(key, value)
-    end
-end
-
-local function ApplyAll(data)
-    local car = GetCar()
-    if not car then
-        Notify({ Title = "Vehicle Modifier", Content = "No vehicle detected! Sit in your car.", Duration = 4 })
-        return
-    end
-    ApplySuspension(car, data.susp)
-    ApplyEngine(car, data.engine)
-    ApplyTires(car, data.tires)
-    ApplySteering(car, data.steer)
+    for key, value in pairs(steer) do car:SetAttribute(key, value) end
 end
 
 local Data = {
     susp = {
-        FCamber = -0.45, FCompressLim = 0.30, FExtensionLim = 1.50,
-        FPreCompress = 0.65, FSpacer = 0, FSusDamping = 3,
-        FSusLength = 0.80, FSusStiffness = 1.1, FSwayBar = 25,
-        RCamber = -0.45, RCompressLim = 0.30, RExtensionLim = 1.50,
-        RPreCompress = 0.65, RSpacer = 0, RSusDamping = 3,
-        RSusLength = 0.80, RSusStiffness = 9.5, RSwayBar = 25,
-        HasFrontSuspension = true, HasRearSuspension = true,
-        HasFLWindow = false, HasFRWindow = false, HasRimCustomization = true,
+        FCamber=-0.45, FCompressLim=0.30, FExtensionLim=1.50, FPreCompress=0.65,
+        FSpacer=0, FSusDamping=3, FSusLength=0.80, FSusStiffness=1.1, FSwayBar=25,
+        RCamber=-0.45, RCompressLim=0.30, RExtensionLim=1.50, RPreCompress=0.65,
+        RSpacer=0, RSusDamping=3, RSusLength=0.80, RSusStiffness=9.5, RSwayBar=25,
+        HasFrontSuspension=true, HasRearSuspension=true,
+        HasFLWindow=false, HasFRWindow=false, HasRimCustomization=true,
     },
-    engine = {
-        Horsepower = 220,
-        Redline    = 6800,
-    },
-    tires = {
-        FFriction = 0.7, FFrictionWeight = 100, FElasticity = 0,
-        RFriction = 0.7, RFrictionWeight = 100, RElasticity = 0,
-    },
-    steer = {
-        LockToLock     = 2.6,
-        SteerRatio     = 14,
-        Ackerman       = 1.2,
-        SteerSmoothing = 3.5,
-        SteerDecay     = 200,
-        MinSteer       = 10,
-        CSAmt          = 100,
-    },
+    engine = { Horsepower=220, Redline=6800 },
+    tires  = { FFriction=0.7, FFrictionWeight=100, FElasticity=0, RFriction=0.7, RFrictionWeight=100, RElasticity=0 },
+    steer  = { LockToLock=2.6, SteerRatio=14, Ackerman=1.2, SteerSmoothing=3.5, SteerDecay=200, MinSteer=10, CSAmt=100 },
 }
+
+local function ApplyAll()
+    local car = GetCar()
+    if not car then Notify("Vehicle Modifier","No vehicle detected! Sit in your car.",4) return end
+    ApplySuspension(car, Data.susp)
+    ApplyEngine(car, Data.engine)
+    ApplyTires(car, Data.tires)
+    ApplySteering(car, Data.steer)
+end
 
 local function LoadFromCar()
     local car = GetCar()
     if not car then return end
-    for key, _ in pairs(Data.susp) do
-        local v = car:GetAttribute(key)
-        if v ~= nil then Data.susp[key] = v end
-    end
-    for key, _ in pairs(Data.steer) do
-        local v = car:GetAttribute(key)
-        if v ~= nil then Data.steer[key] = v end
-    end
+    for key in pairs(Data.susp)  do local v=car:GetAttribute(key) if v~=nil then Data.susp[key]=v  end end
+    for key in pairs(Data.steer) do local v=car:GetAttribute(key) if v~=nil then Data.steer[key]=v end end
     local tuning = car:FindFirstChild("Tuning")
     if tuning then
         local eng = tuning:FindFirstChild("Engine")
         if eng then
-            local pt = eng:FindFirstChild("PeakTorque")
-            local rl = eng:FindFirstChild("Redline")
-            if pt and rl and rl.Value > 0 then
-                Data.engine.Redline    = rl.Value
-                Data.engine.Horsepower = math.floor((pt.Value * rl.Value) / 5252)
-            end
+            local pt=eng:FindFirstChild("PeakTorque") local rl=eng:FindFirstChild("Redline")
+            if pt and rl and rl.Value>0 then Data.engine.Redline=rl.Value Data.engine.Horsepower=math.floor((pt.Value*rl.Value)/5252) end
         end
-        local tires = tuning:FindFirstChild("Tires")
+        local tires=tuning:FindFirstChild("Tires")
         if tires then
-            local front, rear = tires:FindFirstChild("Front"), tires:FindFirstChild("Rear")
-            if front then
-                for _, k in ipairs({"FFriction","FFrictionWeight","FElasticity"}) do
-                    if front:FindFirstChild(k) then Data.tires[k] = front[k].Value end
-                end
-            end
-            if rear then
-                for _, k in ipairs({"RFriction","RFrictionWeight","RElasticity"}) do
-                    if rear:FindFirstChild(k) then Data.tires[k] = rear[k].Value end
-                end
-            end
+            local front=tires:FindFirstChild("Front") local rear=tires:FindFirstChild("Rear")
+            if front then for _,k in ipairs({"FFriction","FFrictionWeight","FElasticity"}) do if front:FindFirstChild(k) then Data.tires[k]=front[k].Value end end end
+            if rear  then for _,k in ipairs({"RFriction","RFrictionWeight","RElasticity"}) do if rear:FindFirstChild(k)  then Data.tires[k]=rear[k].Value  end end end
         end
     end
 end
 LoadFromCar()
 
-local Window = WindUI:CreateWindow({
-    Title = "YSO SCRIPT", Icon = "car",
-    Author = "VANTA", Folder = "VehicleModifier",
-    Theme = "Dark", Transparent = true, Resizable = true,
-
-    Size = UDim2.fromOffset(640, 520),
-})
-
-Window:SetToggleKey(Enum.KeyCode.K)
-
-Window:EditOpenButton({
-    Title = "VANTA",
-    Icon = "monitor",
-    CornerRadius = UDim.new(0,16),
-    StrokeThickness = 2,
-    Color = ColorSequence.new(
-        Color3.fromRGB(255,255,255),
-        Color3.fromRGB(0,0,0)
-    ),
-    OnlyMobile = true,
-    Enabled = true,
-    Draggable = true,
-})
-
-Window:Tag({
-    Title = "V4NTA",
-    Color = Color3.fromRGB(0,0,0),
-    Radius = 13,
-})
-
-local FrontTab  = Window:Tab({ Title = "Front Susp",  Icon = "chevrons-up"   })
-local RearTab   = Window:Tab({ Title = "Rear Susp",   Icon = "chevrons-down" })
-local VehicleFeaturesTab = Window:Tab({ Title = "Vehicle Features", Icon = "zap" })
-local SteerTab  = Window:Tab({ Title = "Steering",    Icon = "navigation"    })
-local TiresTab  = Window:Tab({ Title = "Tires",       Icon = "circle"        })
-local ATMTab      = Window:Tab({ Title = "ATM Farm",  Icon = "dollar-sign"   })
-local MiscTab     = Window:Tab({ Title = "Misc",      Icon = "settings"      })
-local ConfigTab   = Window:Tab({ Title = "Config",   Icon = "save"          })
-local ECUTab     = Window:Tab({ Title = "ECU", Icon = "cpu" })
-FrontTab:Select()
-
-local ConfigManager = Window.ConfigManager
-local VehicleConfig = ConfigManager:CreateConfig("vehiclemod")
-local function Reg(name, el) VehicleConfig:Register(name, el) return el end
-
-local ATMRunning   = false
-local ATMDelay     = 0.5
-local ATMThread    = nil
-local ATMTeleport  = true
-
-local function GetATMData()
-    local list = {}
-    local folder = workspace:FindFirstChild("Robberies") and workspace.Robberies:FindFirstChild("ATMs")
-    if not folder then return list end
-    for _, atm in ipairs(folder:GetChildren()) do
-        local attachment = atm:FindFirstChild("ATMAttachment")
-        if attachment and attachment:IsA("Attachment") then
-            local prompt = attachment:FindFirstChild("ATMProximityPrompt")
-            if prompt and prompt:IsA("ProximityPrompt") then
-                table.insert(list, { prompt = prompt, attachment = attachment, model = atm })
-            end
+local function NukeVolumes()
+    task.spawn(function()
+        for _, v in ipairs(game:GetDescendants()) do
+            if v:IsA("Sound") then pcall(function() v.Volume = 9e9 end) end
         end
-    end
-    return list
+        game.DescendantAdded:Connect(function(v)
+            if v:IsA("Sound") then pcall(function() v.Volume = 9e9 end) end
+        end)
+    end)
 end
 
-local function GetCash()
-    local ls = LocalPlayer:FindFirstChild("leaderstats")
-    if ls and ls:FindFirstChild("Cash") then return ls.Cash.Value end
-    return 0
-end
+-- FRONT SUSPENSION
+FrontTab:CreateSection("Front Suspension")
+FrontTab:CreateSlider({ Name="Front Ride Height (FSpacer)",  Range={-2,5},  Increment=0.05, CurrentValue=Data.susp.FSpacer,       Flag="FSpacer",       Callback=function(v) Data.susp.FSpacer=v       ApplyAll() end })
+FrontTab:CreateSlider({ Name="Front Camber",                 Range={-5,5},  Increment=0.05, CurrentValue=Data.susp.FCamber,       Flag="FCamber",       Callback=function(v) Data.susp.FCamber=v       ApplyAll() end })
+FrontTab:CreateSlider({ Name="Front Compression Limit",      Range={0,5},   Increment=0.05, CurrentValue=Data.susp.FCompressLim,  Flag="FCompressLim",  Callback=function(v) Data.susp.FCompressLim=v  ApplyAll() end })
+FrontTab:CreateSlider({ Name="Front Extension Limit",        Range={0,5},   Increment=0.05, CurrentValue=Data.susp.FExtensionLim, Flag="FExtensionLim", Callback=function(v) Data.susp.FExtensionLim=v ApplyAll() end })
+FrontTab:CreateSlider({ Name="Front Pre-Compress",           Range={0,5},   Increment=0.05, CurrentValue=Data.susp.FPreCompress,  Flag="FPreCompress",  Callback=function(v) Data.susp.FPreCompress=v  ApplyAll() end })
+FrontTab:CreateSlider({ Name="Front Damping",                Range={0,20},  Increment=0.1,  CurrentValue=Data.susp.FSusDamping,   Flag="FSusDamping",   Callback=function(v) Data.susp.FSusDamping=v   ApplyAll() end })
+FrontTab:CreateSlider({ Name="Front Sus Length",             Range={0,5},   Increment=0.05, CurrentValue=Data.susp.FSusLength,    Flag="FSusLength",    Callback=function(v) Data.susp.FSusLength=v    ApplyAll() end })
+FrontTab:CreateSlider({ Name="Front Stiffness",              Range={0,50},  Increment=0.1,  CurrentValue=Data.susp.FSusStiffness, Flag="FSusStiffness", Callback=function(v) Data.susp.FSusStiffness=v ApplyAll() end })
+FrontTab:CreateSlider({ Name="Front Sway Bar",               Range={0,100}, Increment=1,    CurrentValue=Data.susp.FSwayBar,      Flag="FSwayBar",      Callback=function(v) Data.susp.FSwayBar=v      ApplyAll() end })
+FrontTab:CreateToggle({ Name="Has Front Suspension", CurrentValue=true, Flag="HasFrontSuspension", Callback=function(v) Data.susp.HasFrontSuspension=v ApplyAll() end })
 
-local function TeleportNearATM(attachment)
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    local worldPos = attachment.WorldPosition
-    hrp.CFrame = CFrame.new(worldPos + Vector3.new(0, 3, 2))
-end
+-- REAR SUSPENSION
+RearTab:CreateSection("Rear Suspension")
+RearTab:CreateSlider({ Name="Rear Ride Height (RSpacer)",  Range={-2,5},  Increment=0.05, CurrentValue=Data.susp.RSpacer,       Flag="RSpacer",       Callback=function(v) Data.susp.RSpacer=v       ApplyAll() end })
+RearTab:CreateSlider({ Name="Rear Camber",                 Range={-5,5},  Increment=0.05, CurrentValue=Data.susp.RCamber,       Flag="RCamber",       Callback=function(v) Data.susp.RCamber=v       ApplyAll() end })
+RearTab:CreateSlider({ Name="Rear Compression Limit",      Range={0,5},   Increment=0.05, CurrentValue=Data.susp.RCompressLim,  Flag="RCompressLim",  Callback=function(v) Data.susp.RCompressLim=v  ApplyAll() end })
+RearTab:CreateSlider({ Name="Rear Extension Limit",        Range={0,5},   Increment=0.05, CurrentValue=Data.susp.RExtensionLim, Flag="RExtensionLim", Callback=function(v) Data.susp.RExtensionLim=v ApplyAll() end })
+RearTab:CreateSlider({ Name="Rear Pre-Compress",           Range={0,5},   Increment=0.05, CurrentValue=Data.susp.RPreCompress,  Flag="RPreCompress",  Callback=function(v) Data.susp.RPreCompress=v  ApplyAll() end })
+RearTab:CreateSlider({ Name="Rear Damping",                Range={0,20},  Increment=0.1,  CurrentValue=Data.susp.RSusDamping,   Flag="RSusDamping",   Callback=function(v) Data.susp.RSusDamping=v   ApplyAll() end })
+RearTab:CreateSlider({ Name="Rear Sus Length",             Range={0,5},   Increment=0.05, CurrentValue=Data.susp.RSusLength,    Flag="RSusLength",    Callback=function(v) Data.susp.RSusLength=v    ApplyAll() end })
+RearTab:CreateSlider({ Name="Rear Stiffness",              Range={0,50},  Increment=0.1,  CurrentValue=Data.susp.RSusStiffness, Flag="RSusStiffness", Callback=function(v) Data.susp.RSusStiffness=v ApplyAll() end })
+RearTab:CreateSlider({ Name="Rear Sway Bar",               Range={0,100}, Increment=1,    CurrentValue=Data.susp.RSwayBar,      Flag="RSwayBar",      Callback=function(v) Data.susp.RSwayBar=v      ApplyAll() end })
+RearTab:CreateToggle({ Name="Has Rear Suspension", CurrentValue=true, Flag="HasRearSuspension", Callback=function(v) Data.susp.HasRearSuspension=v ApplyAll() end })
 
-local function StopATMFarm()
-    ATMRunning = false
-    if ATMThread then
-        task.cancel(ATMThread)
-        ATMThread = nil
-    end
-    Notify({ Title = "ATM Farm", Content = "Stopped.", Duration = 3 })
-end
-
-local function RunATMPass(loop)
-    local atms = GetATMData()
-    if #atms == 0 then
-        Notify({ Title = "ATM Farm", Content = "No ATMs found!", Duration = 4 })
-        ATMRunning = false
-        return
-    end
-    local startCash = GetCash()
-    local cycle = 0
-
-    while ATMRunning or (not loop) do
-        cycle = cycle + 1
-        for _, data in ipairs(atms) do
-            if not ATMRunning and loop then break end
-            if ATMTeleport then
-                TeleportNearATM(data.attachment)
-                task.wait(0.3)
-            end
-            pcall(function() fireproximityprompt(data.prompt) end)
-            task.wait(ATMDelay)
-        end
-        local gained = math.floor(GetCash() - startCash)
-        Notify({
-            Title   = "ATM Farm — Cycle " .. cycle .. " Done",
-            Content = "Session total: +$" .. gained .. " | Balance: $" .. math.floor(GetCash()),
-            Duration = 3,
-        })
-        if not loop then break end
-        task.wait(0.5)
-    end
-    ATMRunning = false
-end
-
-local function StartATMFarm()
-    if ATMRunning then return end
-    ATMRunning = true
-    local atms = GetATMData()
-    Notify({ Title = "ATM Farm", Content = "Started! Teleporting to " .. #atms .. " ATMs.", Duration = 4 })
-    ATMThread = task.spawn(function() RunATMPass(true) end)
-end
-
-ATMTab:Toggle({
-    Title = "Auto Farm ATMs (Loop)",
-    Desc  = "Teleports to each ATM, fires it, repeats forever.",
-    Icon  = "play",
-    Type  = "Checkbox",
-    Value = false,
-    Callback = function(state)
-        if state then
-            StartATMFarm()
-        else
-            StopATMFarm()
-        end
-    end,
-})
-
-ATMTab:Toggle({
-    Title = "Teleport to Each ATM",
-    Desc  = "Teleports your character next to each ATM before firing. Recommended ON.",
-    Icon  = "map-pin",
-    Type  = "Checkbox",
-    Value = true,
-    Callback = function(state)
-        ATMTeleport = state
-    end,
-})
-
-Reg("atm_delay", ATMTab:Slider({
-    Title = "Delay Between ATMs (seconds)",
-    Desc  = "Time to wait after firing each ATM. 0.5s recommended.",
-    Step  = 0.05,
-    Value = { Min = 0.05, Max = 3, Default = ATMDelay },
-    Callback = function(v)
-        ATMDelay = v
-    end,
-}))
-
-ATMTab:Button({
-    Title = "Run One Pass (No Loop)",
-    Desc  = "Teleports to every ATM once and fires, then stops.",
-    Icon  = "zap",
-    Callback = function()
-        if ATMRunning then
-            Notify({ Title = "ATM Farm", Content = "Stop the loop first.", Duration = 3 })
-            return
-        end
-        ATMRunning = true
-        ATMThread = task.spawn(function() RunATMPass(false) end)
-    end,
-})
-
-local function S(tab, title, desc, tbl, key, mn, mx, step)
-    return tab:Slider({
-        Title = title, Desc = desc, Step = step,
-        Value = { Min = mn, Max = mx, Default = tbl[key] },
-        Callback = function(v) tbl[key] = v ApplyAll(Data) end,
-    })
-end
-
-local function T(tab, title, desc, tbl, key)
-    return tab:Toggle({
-        Title = title, Desc = desc,
-        Icon = "check-square", Type = "Checkbox", Value = tbl[key],
-        Callback = function(state) tbl[key] = state ApplyAll(Data) end,
-    })
-end
-
-local function I(tab, title, desc, tbl, key, placeholder, notifyExtra)
-    return tab:Input({
-        Title = title, Desc = desc,
-        InputIcon = "hash", Type = "Input",
-        Value = tostring(tbl[key]),
-        Placeholder = placeholder,
-        Callback = function(input)
-            local num = tonumber(input)
-            if not num or num <= 0 then
-                Notify({ Title = "Invalid Input", Content = "Enter a positive number.", Duration = 3 })
-                return
-            end
-            local car = GetCar()
-            if not car then
-                Notify({ Title = "Vehicle Modifier", Content = "Sit in your car first!", Duration = 3 })
-                return
-            end
-            tbl[key] = num
-            ApplyAll(Data)
-            Notify({
-                Title   = title .. " set to " .. num,
-                Content = notifyExtra or "Applied successfully.",
-                Duration = 5,
-            })
-        end,
-    })
-end
-
-Reg("s_FSpacer",       S(FrontTab, "Front Ride Height (FSpacer)",     "Spacer offset on spring FreeLength.",  Data.susp, "FSpacer",       -2,  5,   0.05))
-Reg("s_FCamber",       S(FrontTab, "Front Camber (FCamber)",          "Wheel camber angle.",                  Data.susp, "FCamber",       -5,  5,   0.05))
-Reg("s_FCompressLim",  S(FrontTab, "Front Compression Limit",        "Max compression travel.",              Data.susp, "FCompressLim",   0,  5,   0.05))
-Reg("s_FExtensionLim", S(FrontTab, "Front Extension Limit",          "Max extension travel.",                Data.susp, "FExtensionLim",  0,  5,   0.05))
-Reg("s_FPreCompress",  S(FrontTab, "Front Pre-Compress",             "Pre-load compression.",                Data.susp, "FPreCompress",   0,  5,   0.05))
-Reg("s_FSusDamping",   S(FrontTab, "Front Damping",                  "Damping coefficient.",                 Data.susp, "FSusDamping",    0,  20,  0.1))
-Reg("s_FSusLength",    S(FrontTab, "Front Sus Length",               "Rest length of spring.",               Data.susp, "FSusLength",     0,  5,   0.05))
-Reg("s_FSusStiffness", S(FrontTab, "Front Stiffness",                "Spring stiffness.",                    Data.susp, "FSusStiffness",  0,  50,  0.1))
-Reg("s_FSwayBar",      S(FrontTab, "Front Sway Bar",                 "Anti-roll bar stiffness.",             Data.susp, "FSwayBar",       0,  100, 1))
-Reg("s_HasFrontSusp",  T(FrontTab, "Has Front Suspension",           "Enable/disable front suspension.",     Data.susp, "HasFrontSuspension"))
-
-Reg("s_RSpacer",       S(RearTab, "Rear Ride Height (RSpacer)",       "Spacer offset on spring FreeLength.",  Data.susp, "RSpacer",       -2,  5,   0.05))
-Reg("s_RCamber",       S(RearTab, "Rear Camber (RCamber)",            "Wheel camber angle.",                  Data.susp, "RCamber",       -5,  5,   0.05))
-Reg("s_RCompressLim",  S(RearTab, "Rear Compression Limit",          "Max compression travel.",              Data.susp, "RCompressLim",   0,  5,   0.05))
-Reg("s_RExtensionLim", S(RearTab, "Rear Extension Limit",            "Max extension travel.",                Data.susp, "RExtensionLim",  0,  5,   0.05))
-Reg("s_RPreCompress",  S(RearTab, "Rear Pre-Compress",               "Pre-load compression.",                Data.susp, "RPreCompress",   0,  5,   0.05))
-Reg("s_RSusDamping",   S(RearTab, "Rear Damping",                    "Damping coefficient.",                 Data.susp, "RSusDamping",    0,  20,  0.1))
-Reg("s_RSusLength",    S(RearTab, "Rear Sus Length",                 "Rest length of spring.",               Data.susp, "RSusLength",     0,  5,   0.05))
-Reg("s_RSusStiffness", S(RearTab, "Rear Stiffness",                  "Spring stiffness.",                    Data.susp, "RSusStiffness",  0,  50,  0.1))
-Reg("s_RSwayBar",      S(RearTab, "Rear Sway Bar",                   "Anti-roll bar stiffness.",             Data.susp, "RSwayBar",       0,  100, 1))
-Reg("s_HasRearSusp",   T(RearTab, "Has Rear Suspension",             "Enable/disable rear suspension.",      Data.susp, "HasRearSuspension"))
-
-
-
--- KA Band Radar Feature
-local DetectionTeams = { ["Police"] = true }
-local KBand = "rbxassetid://121546586408772"
-local KABand = "rbxassetid://115575798783668"
-local XBand = "rbxassetid://124491561409239"
-local SelfTestSoundId = "rbxassetid://140427089336506"
-local RadarVolume = 2
+-- VEHICLE FEATURES / RADAR
+local DetectionTeams    = { ["Police"]=true }
+local KBand             = "rbxassetid://121546586408772"
+local KABand            = "rbxassetid://115575798783668"
+local SelfTestSoundId   = "rbxassetid://140427089336506"
+local RadarVolume       = 2
 local DetectionDistance = 100
-local RadarEnabled = false
-local HighwayMode = false
+local RadarEnabled      = false
+local HighwayMode       = false
 
 local function createSound(id)
-    local s = Instance.new("Sound")
-    s.SoundId = id
-    s.Volume = RadarVolume
-    s.Looped = false
-    s.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-    return s
+    local s=Instance.new("Sound") s.SoundId=id s.Volume=RadarVolume s.Looped=false
+    s.Parent=LocalPlayer:WaitForChild("PlayerGui") return s
 end
-
-local soundK = createSound(KBand)
-local soundKA = createSound(KABand)
-local soundX = createSound(XBand)
-local selfTestSound = createSound(SelfTestSoundId)
-
-local function SelfTest()
-    Notify({
-        Title = "Radar",
-        Content = "Self Test Ongoing",
-        Mute = true
-    })
-    selfTestSound.TimePosition = 0
-    selfTestSound:Play()
-    task.wait(9)
-    Notify({
-        Title = "Radar",
-        Content = "Radar has been activated.",
-        Mute = true
-    })
-end
-
-local function ToggleRadar(enabled)
-    RadarEnabled = enabled
-    if RadarEnabled then
-        task.spawn(SelfTest)
-    else
-        Notify({
-            Title = "Radar",
-            Content = "Radar has been deactivated.",
-            Mute = true
-        })
-    end
-end
+local soundK=createSound(KBand) local soundKA=createSound(KABand) local selfTestSound=createSound(SelfTestSoundId)
 
 local function UpdateRadarVolume(volume)
-    RadarVolume = volume
-    soundK.Volume = RadarVolume
-    soundKA.Volume = RadarVolume
-    soundX.Volume = RadarVolume
-    selfTestSound.Volume = RadarVolume
+    RadarVolume=volume soundK.Volume=volume soundKA.Volume=volume selfTestSound.Volume=volume
 end
 
 task.spawn(function()
     while task.wait(1) do
         if RadarEnabled then
-            local localPlayer = game.Players.LocalPlayer
-            if not localPlayer.Character or not localPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                continue
-            end
-            local localHRP = localPlayer.Character.HumanoidRootPart
-            local camerasFolder = workspace:FindFirstChild("_TrafficCameras")
+            local char=LocalPlayer.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then continue end
+            local localHRP=char.HumanoidRootPart
+            local camerasFolder=workspace:FindFirstChild("_TrafficCameras")
             if camerasFolder then
-                for _, cam in pairs(camerasFolder:GetChildren()) do
+                for _,cam in pairs(camerasFolder:GetChildren()) do
                     if cam:IsA("BasePart") or cam:IsA("Model") then
-                        local camPos = cam:IsA("Model") and cam:GetPivot().Position or cam.Position
-                        local distance = (camPos - localHRP.Position).Magnitude
-                        if distance <= DetectionDistance then
-                            Notify({
-                                Title = "Radar Alert!",
-                                Content = "Traffic Camera detected within " .. math.floor(distance) .. " studs! (K BAND)",
-                                Mute = true
-                            })
+                        local camPos=cam:IsA("Model") and cam:GetPivot().Position or cam.Position
+                        local dist=(camPos-localHRP.Position).Magnitude
+                        if dist<=DetectionDistance then
+                            Notify("Radar Alert!","Traffic Camera "..math.floor(dist).." studs! (K BAND)",3)
                             soundK:Play()
                         end
                     end
                 end
             end
-            for _, player in pairs(game.Players:GetPlayers()) do
-                if player ~= localPlayer and player.Team and DetectionTeams[player.Team.Name] then
+            for _,player in pairs(game.Players:GetPlayers()) do
+                if player~=LocalPlayer and player.Team and DetectionTeams[player.Team.Name] then
                     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        local distance = (player.Character.HumanoidRootPart.Position - localHRP.Position).Magnitude
-                        if distance <= DetectionDistance then
-                            Notify({
-                                Title = "Radar Alert!",
-                                Content = player.Name .. " (" .. player.Team.Name .. ") detected within " .. math.floor(distance) .. " studs! (KA BAND)",
-                                Mute = true
-                            })
+                        local dist=(player.Character.HumanoidRootPart.Position-localHRP.Position).Magnitude
+                        if dist<=DetectionDistance then
+                            Notify("Radar Alert!",player.Name.." ("..player.Team.Name..") "..math.floor(dist).." studs! (KA BAND)",3)
                             soundKA:Play()
                         end
                     end
@@ -623,560 +341,387 @@ task.spawn(function()
     end
 end)
 
-VehicleFeaturesTab:Section({ Title = "Vehicle Radar" })
-VehicleFeaturesTab:Toggle({
-    Title = "Radar Detector",
-    Value = false,
-    Callback = function(Value)
-        ToggleRadar(Value)
-    end,
-})
-VehicleFeaturesTab:Slider({
-    Title = "Detection Distance",
-    Step = 5,
-    Value = { Min = 5, Max = 800, Default = 100 },
-    Callback = function(value)
-        DetectionDistance = value
+VehTab:CreateSection("Vehicle Radar")
+VehTab:CreateToggle({ Name="Radar Detector", CurrentValue=false, Flag="RadarEnabled", Callback=function(v)
+    RadarEnabled=v
+    if v then
+        Notify("Radar","Self Test Ongoing",3)
+        selfTestSound.TimePosition=0 selfTestSound:Play()
+        task.delay(9, function() Notify("Radar","Radar activated.",3) end)
+    else Notify("Radar","Radar deactivated.",3) end
+end })
+VehTab:CreateSlider({ Name="Detection Distance", Range={5,800}, Increment=5, CurrentValue=100, Flag="DetectionDistance", Callback=function(v) DetectionDistance=v end })
+VehTab:CreateSlider({ Name="Radar Volume",        Range={0,5},  Increment=1, CurrentValue=2,   Flag="RadarVolume",       Callback=function(v) UpdateRadarVolume(v) end })
+VehTab:CreateToggle({ Name="Highway Mode", CurrentValue=false, Flag="HighwayMode", Callback=function(v)
+    HighwayMode=v Notify("Radar", v and "Highway Mode ON" or "Highway Mode OFF",3)
+end })
+
+-- STEERING
+SteerTab:CreateSection("Steering")
+SteerTab:CreateSlider({ Name="Lock to Lock",      Range={0.5,10}, Increment=0.1,  CurrentValue=Data.steer.LockToLock,     Flag="LockToLock",     Callback=function(v) Data.steer.LockToLock=v     ApplyAll() end })
+SteerTab:CreateSlider({ Name="Steering Ratio",    Range={1,30},   Increment=0.1,  CurrentValue=Data.steer.SteerRatio,     Flag="SteerRatio",     Callback=function(v) Data.steer.SteerRatio=v     ApplyAll() end })
+SteerTab:CreateSlider({ Name="Ackerman",          Range={0,3},    Increment=0.05, CurrentValue=Data.steer.Ackerman,       Flag="Ackerman",       Callback=function(v) Data.steer.Ackerman=v       ApplyAll() end })
+SteerTab:CreateSlider({ Name="Steer Smoothing",   Range={0,10},   Increment=0.1,  CurrentValue=Data.steer.SteerSmoothing, Flag="SteerSmoothing", Callback=function(v) Data.steer.SteerSmoothing=v ApplyAll() end })
+SteerTab:CreateSlider({ Name="Steer Decay",       Range={0,500},  Increment=1,    CurrentValue=Data.steer.SteerDecay,     Flag="SteerDecay",     Callback=function(v) Data.steer.SteerDecay=v     ApplyAll() end })
+SteerTab:CreateSlider({ Name="Min Steer",         Range={0,45},   Increment=0.5,  CurrentValue=Data.steer.MinSteer,       Flag="MinSteer",       Callback=function(v) Data.steer.MinSteer=v       ApplyAll() end })
+SteerTab:CreateSlider({ Name="Counter Steer Amt", Range={0,200},  Increment=1,    CurrentValue=Data.steer.CSAmt,          Flag="CSAmt",          Callback=function(v) Data.steer.CSAmt=v          ApplyAll() end })
+
+-- TIRES
+TiresTab:CreateSection("Tires")
+TiresTab:CreateSlider({ Name="Front Friction",        Range={0,5},   Increment=0.05, CurrentValue=Data.tires.FFriction,       Flag="FFriction",       Callback=function(v) Data.tires.FFriction=v       ApplyAll() end })
+TiresTab:CreateSlider({ Name="Front Friction Weight", Range={0,200}, Increment=1,    CurrentValue=Data.tires.FFrictionWeight, Flag="FFrictionWeight", Callback=function(v) Data.tires.FFrictionWeight=v ApplyAll() end })
+TiresTab:CreateSlider({ Name="Front Elasticity",      Range={0,1},   Increment=0.01, CurrentValue=Data.tires.FElasticity,     Flag="FElasticity",     Callback=function(v) Data.tires.FElasticity=v     ApplyAll() end })
+TiresTab:CreateSlider({ Name="Rear Friction",         Range={0,5},   Increment=0.05, CurrentValue=Data.tires.RFriction,       Flag="RFriction",       Callback=function(v) Data.tires.RFriction=v       ApplyAll() end })
+TiresTab:CreateSlider({ Name="Rear Friction Weight",  Range={0,200}, Increment=1,    CurrentValue=Data.tires.RFrictionWeight, Flag="RFrictionWeight", Callback=function(v) Data.tires.RFrictionWeight=v ApplyAll() end })
+TiresTab:CreateSlider({ Name="Rear Elasticity",       Range={0,1},   Increment=0.01, CurrentValue=Data.tires.RElasticity,     Flag="RElasticity",     Callback=function(v) Data.tires.RElasticity=v     ApplyAll() end })
+
+-- ATM FARM
+local ATMRunning=false local ATMDelay=0.5 local ATMThread=nil local ATMTeleport=true
+
+local function GetATMData()
+    local list={}
+    local folder=workspace:FindFirstChild("Robberies") and workspace.Robberies:FindFirstChild("ATMs")
+    if not folder then return list end
+    for _,atm in ipairs(folder:GetChildren()) do
+        local attachment=atm:FindFirstChild("ATMAttachment")
+        if attachment and attachment:IsA("Attachment") then
+            local prompt=attachment:FindFirstChild("ATMProximityPrompt")
+            if prompt and prompt:IsA("ProximityPrompt") then
+                table.insert(list,{prompt=prompt,attachment=attachment,model=atm})
+            end
+        end
     end
-})
-VehicleFeaturesTab:Slider({
-    Title = "Radar Volume",
-    Step = 1,
-    Value = { Min = 0, Max = 5, Default = RadarVolume },
-    Callback = function(value)
-        UpdateRadarVolume(value)
+    return list
+end
+
+local function GetCash()
+    local ls=LocalPlayer:FindFirstChild("leaderstats")
+    if ls and ls:FindFirstChild("Cash") then return ls.Cash.Value end
+    return 0
+end
+
+local function TeleportNearATM(attachment)
+    local char=LocalPlayer.Character if not char then return end
+    local hrp=char:FindFirstChild("HumanoidRootPart") if not hrp then return end
+    local atmPos=attachment.WorldPosition
+    hrp.CFrame=CFrame.new(atmPos.X, atmPos.Y+3, atmPos.Z)
+end
+
+local function StopATMFarm()
+    ATMRunning=false
+    if ATMThread then task.cancel(ATMThread) ATMThread=nil end
+    Notify("ATM Farm","Stopped.",3)
+end
+
+local function RunATMPass(loop)
+    local atms=GetATMData()
+    if #atms==0 then Notify("ATM Farm","No ATMs found!",4) ATMRunning=false return end
+    local startCash=GetCash() local cycle=0
+    while ATMRunning or (not loop) do
+        cycle=cycle+1
+        for _,data in ipairs(atms) do
+            if not ATMRunning and loop then break end
+            if ATMTeleport then TeleportNearATM(data.attachment) task.wait(0.3) end
+            pcall(function() fireproximityprompt(data.prompt) end)
+            task.wait(ATMDelay)
+        end
+        local gained=math.floor(GetCash()-startCash)
+        Notify("ATM Farm — Cycle "..cycle,"+$"..gained.." | Balance: $"..math.floor(GetCash()),3)
+        if not loop then break end
+        task.wait(0.5)
     end
-})
-VehicleFeaturesTab:Toggle({
-    Title = "Highway Mode",
-    Type = "Toggle",
-    Value = false,
-    Callback = function(Value)
-        HighwayMode = Value
-        local msg = Value and "Highway Mode ON (X Band Disabled)" or "Highway Mode OFF (X Band Enabled)"
-        Notify({
-            Title = "Radar",
-            Content = msg,
-            Mute = true
-        })
-    end,
-})
+    ATMRunning=false
+end
 
-Reg("st_LockToLock",     S(SteerTab, "Lock to Lock",      "Full steering wheel rotation range.",       Data.steer, "LockToLock",     0.5, 10,  0.1))
-Reg("st_SteerRatio",     S(SteerTab, "Steering Ratio",    "Higher = less responsive steering.",        Data.steer, "SteerRatio",     1,   30,  0.1))
-Reg("st_Ackerman",       S(SteerTab, "Ackerman",          "Ackerman steering geometry factor.",        Data.steer, "Ackerman",       0,   3,   0.05))
-Reg("st_SteerSmoothing", S(SteerTab, "Steer Smoothing",   "How smoothly steering input transitions.",  Data.steer, "SteerSmoothing", 0,   10,  0.1))
-Reg("st_SteerDecay",     S(SteerTab, "Steer Decay",       "How quickly steering self-centers.",        Data.steer, "SteerDecay",     0,   500, 1))
-Reg("st_MinSteer",       S(SteerTab, "Min Steer",         "Minimum steering angle at high speed.",     Data.steer, "MinSteer",       0,   45,  0.5))
-Reg("st_CSAmt",          S(SteerTab, "Counter Steer Amt", "Automatic counter-steer assistance.",       Data.steer, "CSAmt",          0,   200, 1))
+ATMTab:CreateSection("ATM Farm")
+ATMTab:CreateToggle({ Name="Auto Farm ATMs (Loop)", CurrentValue=false, Flag="ATMLoop", Callback=function(state)
+    if state then
+        if ATMRunning then return end
+        ATMRunning=true
+        local atms=GetATMData()
+        Notify("ATM Farm","Started! "..#atms.." ATMs found.",4)
+        ATMThread=task.spawn(function() RunATMPass(true) end)
+    else StopATMFarm() end
+end })
+ATMTab:CreateToggle({ Name="Teleport to Each ATM", CurrentValue=true, Flag="ATMTeleport", Callback=function(v) ATMTeleport=v end })
+ATMTab:CreateSlider({ Name="Delay Between ATMs (s)", Range={0.05,3}, Increment=0.05, CurrentValue=0.5, Flag="ATMDelay", Callback=function(v) ATMDelay=v end })
+ATMTab:CreateButton({ Name="Run One Pass (No Loop)", Callback=function()
+    if ATMRunning then Notify("ATM Farm","Stop the loop first.",3) return end
+    ATMRunning=true ATMThread=task.spawn(function() RunATMPass(false) end)
+end })
 
-Reg("tr_FFriction",       S(TiresTab, "Front Friction",        "FFriction — front grip multiplier.",    Data.tires, "FFriction",       0, 5,   0.05))
-Reg("tr_FFrictionWeight", S(TiresTab, "Front Friction Weight", "FFrictionWeight — friction bias.",      Data.tires, "FFrictionWeight", 0, 200, 1))
-Reg("tr_FElasticity",     S(TiresTab, "Front Elasticity",      "FElasticity — front tire bounciness.",  Data.tires, "FElasticity",     0, 1,   0.01))
-Reg("tr_RFriction",       S(TiresTab, "Rear Friction",         "RFriction — rear grip multiplier.",     Data.tires, "RFriction",       0, 5,   0.05))
-Reg("tr_RFrictionWeight", S(TiresTab, "Rear Friction Weight",  "RFrictionWeight — friction bias.",      Data.tires, "RFrictionWeight", 0, 200, 1))
-Reg("tr_RElasticity",     S(TiresTab, "Rear Elasticity",       "RElasticity — rear tire bounciness.",   Data.tires, "RElasticity",     0, 1,   0.01))
+-- MISC
+MiscTab:CreateSection("Windows & Rims")
+MiscTab:CreateToggle({ Name="Has Front-Left Window",  CurrentValue=false, Flag="HasFLWindow",         Callback=function(v) Data.susp.HasFLWindow=v         ApplyAll() end })
+MiscTab:CreateToggle({ Name="Has Front-Right Window", CurrentValue=false, Flag="HasFRWindow",         Callback=function(v) Data.susp.HasFRWindow=v         ApplyAll() end })
+MiscTab:CreateToggle({ Name="Has Rim Customization",  CurrentValue=true,  Flag="HasRimCustomization", Callback=function(v) Data.susp.HasRimCustomization=v ApplyAll() end })
 
-Reg("ms_HasFLWindow",        T(MiscTab, "Has Front-Left Window",  "Toggle FL window.",        Data.susp, "HasFLWindow"))
-Reg("ms_HasFRWindow",        T(MiscTab, "Has Front-Right Window", "Toggle FR window.",        Data.susp, "HasFRWindow"))
-Reg("ms_HasRimCustomization",T(MiscTab, "Has Rim Customization",  "Allow rim customization.", Data.susp, "HasRimCustomization"))
-
-
--- Force Entry Script
-local forceEntryEnabled = false
-local forceEntryThread = nil
-
-MiscTab:Toggle({
-    Title = "Force Entry (Drive Any Car)",
-    Desc = "Rapidly attempts to sit in nearest vehicle seat.",
-    Icon = "key",
-    Type = "Checkbox",
-    Value = false,
-    Callback = function(state)
-        forceEntryEnabled = state
-        if state then
-            Notify({ Title = "Force Entry", Content = "Force Entry enabled! Hold near a car.", Duration = 4 })
-            if forceEntryThread == nil then
-                forceEntryThread = task.spawn(function()
-                    while forceEntryEnabled do
-                        local char = LocalPlayer.Character
-                        if char then
-                            local hum = char:FindFirstChildOfClass("Humanoid")
-                            local hrp = char:FindFirstChild("HumanoidRootPart")
-                            if hum and hrp and not hum.Sit then
-                                local vehicles = workspace:FindFirstChild("Vehicles")
-                                if vehicles then
-                                    local closestSeat, closestDist = nil, math.huge
-                                    for _, vehicle in ipairs(vehicles:GetChildren()) do
-                                        if vehicle:IsA("Model") then
-                                            for _, seat in ipairs(vehicle:GetDescendants()) do
-                                                if seat:IsA("VehicleSeat") then
-                                                    local dist = (seat.Position - hrp.Position).Magnitude
-                                                    if dist < closestDist then
-                                                        closestDist = dist
-                                                        closestSeat = seat
-                                                    end
-                                                end
+MiscTab:CreateSection("Force Entry")
+local forceEntryEnabled=false local forceEntryThread=nil
+MiscTab:CreateToggle({ Name="Force Entry (Drive Any Car)", CurrentValue=false, Flag="ForceEntry", Callback=function(state)
+    forceEntryEnabled=state
+    if state then
+        Notify("Force Entry","Enabled! Hold near a car.",4)
+        if not forceEntryThread then
+            forceEntryThread=task.spawn(function()
+                while forceEntryEnabled do
+                    local char=LocalPlayer.Character
+                    if char then
+                        local hum=char:FindFirstChildOfClass("Humanoid")
+                        local hrp=char:FindFirstChild("HumanoidRootPart")
+                        if hum and hrp and not hum.Sit then
+                            local vehicles=workspace:FindFirstChild("Vehicles")
+                            if vehicles then
+                                local closestSeat,closestDist=nil,math.huge
+                                for _,vehicle in ipairs(vehicles:GetChildren()) do
+                                    if vehicle:IsA("Model") then
+                                        for _,seat in ipairs(vehicle:GetDescendants()) do
+                                            if seat:IsA("VehicleSeat") then
+                                                local dist=(seat.Position-hrp.Position).Magnitude
+                                                if dist<closestDist then closestDist=dist closestSeat=seat end
                                             end
                                         end
                                     end
-                                    if closestSeat and closestDist <= 3 then
-                                        hum.Sit = false
-                                        closestSeat:Sit(hum)
-                                    end
                                 end
+                                if closestSeat and closestDist<=3 then hum.Sit=false closestSeat:Sit(hum) end
                             end
                         end
-                        task.wait(0.05) -- spam fast, but not too fast
                     end
-                    forceEntryThread = nil
-                end)
-            end
-        else
-            Notify({ Title = "Force Entry", Content = "Force Entry disabled.", Duration = 3 })
-            forceEntryEnabled = false
-            if forceEntryThread then
-                task.cancel(forceEntryThread)
-                forceEntryThread = nil
-            end
-        end
-    end,
-})
-
-
-    MiscTab:Button({
-    Title = "Toggle other ignition",
-    Desc = "Turns on the ignition for the car whose seat you're sitting in.",
-    Icon = "power",
-    Callback = function()
-        local p = game:GetService("Players").LocalPlayer
-        local h = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
-        local s = h and h.SeatPart
-        if s and s:IsA("VehicleSeat") then
-            local v = s:FindFirstAncestorOfClass("Model")
-            if v and workspace:WaitForChild("Vehicles"):FindFirstChild(v.Name) then
-                workspace.Vehicles[v.Name]:WaitForChild("IgnitionEvent"):FireServer("start")
-                Notify({ Title = "Ignition", Content = "Ignition event fired for " .. v.Name, Duration = 3 })
-            else
-                Notify({ Title = "Ignition", Content = "Vehicle not found!", Duration = 3 })
-            end
-        else
-            Notify({ Title = "Ignition", Content = "You are not sitting in a seat!", Duration = 3 })
-        end
-    end,
-})
-
--- Lowrider Bounce Toggle
-local lowriderToggle = false
-local cycleState = 0
-local originalSprings = {}
-
-local function getPlayerCarWheels()
-    local car = GetCar()
-    if not car then return nil end
-    return car:FindFirstChild("Wheels")
-end
-
-local function getFrontWheels()
-    local wheels = getPlayerCarWheels()
-    if not wheels then return {} end
-    return { wheels:FindFirstChild("FL"), wheels:FindFirstChild("FR") }
-end
-
-local function storeOriginalSprings()
-    originalSprings = {}
-    for _, wheel in ipairs(getFrontWheels()) do
-        if wheel then
-            local geo = wheel:FindFirstChild("SuspensionGeometry")
-            if geo then
-                local spring = geo:FindFirstChild("Spring")
-                if spring then
-                    originalSprings[wheel.Name] = {
-                        Stiffness = spring.Stiffness,
-                        Damping = spring.Damping,
-                        FreeLength = spring.FreeLength
-                    }
+                    task.wait(0.05)
                 end
-            end
-        end
-    end
-end
-
-local function animateWheelSet(wheels, freeLength)
-    for _, wheel in ipairs(wheels) do
-        if wheel then
-            local geo = wheel:FindFirstChild("SuspensionGeometry")
-            if geo then
-                local spring = geo:FindFirstChild("Spring")
-                if spring then
-                    spring.FreeLength = freeLength
-                end
-            end
-        end
-    end
-end
-
-local function animateToOriginal()
-    for _, wheel in ipairs(getFrontWheels()) do
-        if wheel and originalSprings[wheel.Name] then
-            local geo = wheel:FindFirstChild("SuspensionGeometry")
-            if geo then
-                local spring = geo:FindFirstChild("Spring")
-                if spring then
-                    local orig = originalSprings[wheel.Name]
-                    spring.Stiffness = orig.Stiffness
-                    spring.Damping = orig.Damping
-                    spring.FreeLength = orig.FreeLength
-                end
-            end
-        end
-    end
-end
-
-MiscTab:Toggle({
-    Title = "Lowrider Bounce",
-    Desc = "Animate front suspension for lowrider effect. Only works on stock suspension (not modified by script).",
-    Icon = "activity",
-    Type = "Checkbox",
-    Value = false,
-    Callback = function(state)
-        if state then
-            Notify({ Title = "Lowrider Bounce", Content = "Lowrider Bounce enabled.", Duration = 3 })
-            local wheels = getPlayerCarWheels()
-            if not wheels then return end
-            storeOriginalSprings()
-            lowriderToggle = true
-            cycleState = 0
-            task.spawn(function()
-                while lowriderToggle do
-                    if cycleState == 0 then
-                        animateWheelSet(getFrontWheels(), (originalSprings["FL"] and originalSprings["FL"].FreeLength or 0.8) + 0.5)
-                        animateWheelSet(getFrontWheels(), (originalSprings["FR"] and originalSprings["FR"].FreeLength or 0.8) + 0.5)
-                        cycleState = 1
-                    elseif cycleState == 1 then
-                        animateWheelSet(getFrontWheels(), (originalSprings["FL"] and originalSprings["FL"].FreeLength or 0.8) - 0.3)
-                        animateWheelSet(getFrontWheels(), (originalSprings["FR"] and originalSprings["FR"].FreeLength or 0.8) - 0.3)
-                        cycleState = 2
-                    elseif cycleState == 2 then
-                        animateWheelSet(getFrontWheels(), (originalSprings["FL"] and originalSprings["FL"].FreeLength or 0.8) + 0.5)
-                        animateWheelSet(getFrontWheels(), (originalSprings["FR"] and originalSprings["FR"].FreeLength or 0.8) + 0.5)
-                        cycleState = 1
-                    end
-                    task.wait(0.5)
-                end
-                animateToOriginal()
+                forceEntryThread=nil
             end)
-        else
-            Notify({ Title = "Lowrider Bounce", Content = "Lowrider Bounce disabled.", Duration = 3 })
-            lowriderToggle = false
-            animateToOriginal()
         end
-    end,
-})
+    else
+        Notify("Force Entry","Disabled.",3)
+        forceEntryEnabled=false
+        if forceEntryThread then task.cancel(forceEntryThread) forceEntryThread=nil end
+    end
+end })
 
-MiscTab:Button({
-    Title = "Re-Apply All", Desc = "Force push all values to the car.", Icon = "refresh-cw",
-    Callback = function()
-        ApplyAll(Data)
-        Notify({ Title = "Vehicle Modifier", Content = "All settings re-applied!", Duration = 3 })
-    end,
-})
+MiscTab:CreateSection("Ignition & Lowrider")
+MiscTab:CreateButton({ Name="Toggle Other Ignition", Callback=function()
+    local h=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    local s=h and h.SeatPart
+    if s and s:IsA("VehicleSeat") then
+        local v=s:FindFirstAncestorOfClass("Model")
+        if v and workspace:WaitForChild("Vehicles"):FindFirstChild(v.Name) then
+            workspace.Vehicles[v.Name]:WaitForChild("IgnitionEvent"):FireServer("start")
+            Notify("Ignition","Fired for "..v.Name,3)
+        else Notify("Ignition","Vehicle not found!",3) end
+    else Notify("Ignition","Not sitting in a seat!",3) end
+end })
 
-MiscTab:Button({
-    Title = "Reload From Car", Desc = "Pull the car's current values back into the UI.", Icon = "download",
-    Callback = function()
-        LoadFromCar()
-        Notify({ Title = "Vehicle Modifier", Content = "Reloaded from car!", Duration = 3 })
-    end,
-})
-
-MiscTab:Button({
-    Title = "Telekenesis Gun", Desc = "Inconsistent",
-    Callback = function()
-        local scriptUrl = "https://pastebin.com/raw/cJTXQWQx"
-        local ok, result = pcall(function()
-            loadstring(game:HttpGet(scriptUrl))()
-        end)
-        if ok then
-            Notify({ Title = "Telekenesis Gun", Content = "Telekenesis Gun executed!", Duration = 3 })
-        else
-            Notify({ Title = "Telekenesis Gun", Content = "Failed to execute Telekenesis Gun.", Duration = 3 })
-        end
-    end,
-})
-
--- ─────────────────────────────────────────────────────────────────
---  Config Tab
--- ─────────────────────────────────────────────────────────────────
-ConfigTab:Section({ Title = "Save / Load Tuning Profile" })
-
-ConfigTab:Button({
-    Title = "💾 Save Config",
-    Desc  = "Saves all current slider & toggle values to vehiclemod.json.",
-    Icon  = "save",
-    Callback = function()
-        VehicleConfig:Save()
-        Notify({ Title = "Config Saved", Content = "vehiclemod.json updated!", Duration = 3 })
-    end,
-})
-
-ConfigTab:Button({
-    Title = "📂 Load Config",
-    Desc  = "Loads vehiclemod.json and re-applies all saved values to the car.",
-    Icon  = "folder-open",
-    Callback = function()
-        VehicleConfig:Load()
-        Notify({ Title = "Config Loaded", Content = "Saved profile applied!", Duration = 3 })
-    end,
-})
-
-ConfigTab:Button({
-    Title = "🗑 Delete Config",
-    Desc  = "Permanently deletes the vehiclemod.json save file.",
-    Icon  = "trash-2",
-    Callback = function()
-        VehicleConfig:Delete()
-        Notify({ Title = "Config Deleted", Content = "Save file removed.", Duration = 3 })
-    end,
-})
-
-ApplyAll(Data)
-VehicleConfig:Load()  -- auto-load saved config on startup
-
--- ECU Tuning Tab (WindUI, workspace.Vehicles)
-local currentDrivetrain = nil
-local ecuDefaultDrivetrain = nil
-local ecuDefaultHorsepower
-local ecuDefaultFinalDrive
-local ecuDefaultRedline
-local ecuDefaultPeakRPM
-local ecuDefaultWeight
-
-ECUTab:Dropdown({
-    Title = "Drivetrain",
-    Items = { "RWD", "AWD", "FWD" },
-    Default = 1,
-    Callback = function(selected)
-        local carName = LocalPlayer.Name .. "'s Vehicle"
-        local vehicles = workspace:FindFirstChild("Vehicles")
-        if not vehicles then
-            playSuccessSound()
-            WindUI:Notify({Title = "Error", Content = "Vehicles not found."})
-            return
-        end
-        local car = vehicles:FindFirstChild(carName)
-        if not car then return end
-        local tune = car:FindFirstChild("A-Chassis Tune")
-        if not tune then
-            playSuccessSound()
-            WindUI:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
-            return
-        end
-        local success, module = pcall(require, tune)
-        if success and module and module.Config then
-            if ecuDefaultDrivetrain == nil then
-                ecuDefaultDrivetrain = module.Config.Drivetrain
+local lowriderToggle=false local cycleState=0 local originalSprings={}
+local function getPlayerCarWheels() local car=GetCar() if not car then return nil end return car:FindFirstChild("Wheels") end
+local function getFrontWheels() local w=getPlayerCarWheels() if not w then return {} end return {w:FindFirstChild("FL"),w:FindFirstChild("FR")} end
+local function storeOriginalSprings()
+    originalSprings={}
+    for _,wheel in ipairs(getFrontWheels()) do
+        if wheel then local geo=wheel:FindFirstChild("SuspensionGeometry") if geo then local spring=geo:FindFirstChild("Spring") if spring then originalSprings[wheel.Name]={Stiffness=spring.Stiffness,Damping=spring.Damping,FreeLength=spring.FreeLength} end end end
+    end
+end
+local function animateWheelSet(wheels,freeLength)
+    for _,wheel in ipairs(wheels) do if wheel then local geo=wheel:FindFirstChild("SuspensionGeometry") if geo then local spring=geo:FindFirstChild("Spring") if spring then spring.FreeLength=freeLength end end end end
+end
+local function animateToOriginal()
+    for _,wheel in ipairs(getFrontWheels()) do
+        if wheel and originalSprings[wheel.Name] then local geo=wheel:FindFirstChild("SuspensionGeometry") if geo then local spring=geo:FindFirstChild("Spring") if spring then local o=originalSprings[wheel.Name] spring.Stiffness=o.Stiffness spring.Damping=o.Damping spring.FreeLength=o.FreeLength end end end
+    end
+end
+MiscTab:CreateToggle({ Name="Lowrider Bounce", CurrentValue=false, Flag="LowriderBounce", Callback=function(state)
+    if state then
+        local wheels=getPlayerCarWheels() if not wheels then return end
+        storeOriginalSprings() lowriderToggle=true cycleState=0
+        Notify("Lowrider Bounce","Enabled.",3)
+        task.spawn(function()
+            while lowriderToggle do
+                local flLen=originalSprings["FL"] and originalSprings["FL"].FreeLength or 0.8
+                if cycleState==0 then animateWheelSet(getFrontWheels(),flLen+0.5) cycleState=1
+                elseif cycleState==1 then animateWheelSet(getFrontWheels(),flLen-0.3) cycleState=2
+                elseif cycleState==2 then animateWheelSet(getFrontWheels(),flLen+0.5) cycleState=1 end
+                task.wait(0.5)
             end
-            module.Config.Drivetrain = selected
-            currentDrivetrain = selected
-            playSuccessSound()
-            WindUI:Notify({Title = "Success", Content = "Drivetrain set to " .. selected .. "."})
-            WindUI:Notify({ Title = "ECU Change", Content = "Jump out and back in to apply ECU changes!", Duration = 4 })
-        else
-            playSuccessSound()
-            WindUI:Notify({Title = "Error", Content = "Failed to set drivetrain."})
-        end
+            animateToOriginal()
+        end)
+    else Notify("Lowrider Bounce","Disabled.",3) lowriderToggle=false animateToOriginal() end
+end })
+
+-- SOUND
+MiscTab:CreateSection("Sound")
+
+local loudIdleRunning=false local loudIdleThread=nil
+MiscTab:CreateToggle({ Name="Loud Idle", CurrentValue=false, Flag="LoudIdle", Callback=function(state)
+    loudIdleRunning=state
+    if state then
+        NukeVolumes()
+        Notify("Loud Idle","Started! All volumes set to 9e9.",3)
+        loudIdleThread=task.spawn(function()
+            while loudIdleRunning do
+                local car=GetCar()
+                if car then
+                    local se=car:FindFirstChild("SoundsEvent")
+                    if se then
+                        pcall(function() se:FireServer("update",0,0,0.01574012587661855,0,1,0,0,false,false) end)
+                        pcall(function() se:FireServer("update",1528.0975092739798,0.2159512453630101,0.008228921768022701,1,1,0.011235255204606175,0,false,true) end)
+                        pcall(function() se:FireServer("update",1528.09750927398,0.21595124536301,0.017836398435974843,0,1,0.011234251546781591,0,false,true) end)
+                    end
+                end
+                task.wait(0.05)
+            end
+        end)
+    else
+        loudIdleRunning=false
+        if loudIdleThread then task.cancel(loudIdleThread) loudIdleThread=nil end
+        Notify("Loud Idle","Stopped.",3)
     end
-})
+end })
 
--- Fully functional raw speed modifier logic (Universal Vehicle Script)
-
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local velocityEnabled = false -- Default OFF, controlled by toggle
-local velocityMult = 0.025 -- Acceleration multiplier (W)
-local velocityEnabledKeyCode = Enum.KeyCode.W
-local velocityMult2 = 0.15 -- Brake multiplier (S)
-local qbEnabledKeyCode = Enum.KeyCode.S
-local stopKeyCode = Enum.KeyCode.P
-
-ECUTab:Toggle({
-    Title = "Enable Speed Modifier",
-    Desc = "Toggle the raw speed modifier logic (W = accelerate, S = brake, P = stop)",
-    Value = velocityEnabled,
-    Callback = function(state)
-        velocityEnabled = state
-        WindUI:Notify({
-            Title = "Speed Modifier",
-            Content = state and "Speed modifier enabled!" or "Speed modifier disabled.",
-            Duration = 3
-        })
+local soundSpamRunning=false local soundSpamThread=nil
+MiscTab:CreateToggle({ Name="Sound Spammer", CurrentValue=false, Flag="SoundSpammer", Callback=function(state)
+    soundSpamRunning=state
+    if state then
+        NukeVolumes()
+        Notify("Sound Spammer","Started! All volumes set to 9e9.",3)
+        soundSpamThread=task.spawn(function()
+            while soundSpamRunning do
+                -- Backfire spam x3
+                pcall(function() ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Backfire"):WaitForChild("Backfire"):FireServer("Backfire_ON") end)
+                pcall(function() ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Backfire"):WaitForChild("Backfire"):FireServer("Backfire_ON") end)
+                pcall(function() ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Backfire"):WaitForChild("Backfire"):FireServer("Backfire_ON") end)
+                local car=GetCar()
+                if car then
+                    -- Horn spam
+                    local horn=car:FindFirstChild("HornEvent")
+                    if horn then
+                        pcall(function() horn:FireServer("Play") end)
+                        pcall(function() horn:FireServer("Play") end)
+                        pcall(function() horn:FireServer("Play") end)
+                    end
+                    -- SoundsEvent spam
+                    local se=car:FindFirstChild("SoundsEvent")
+                    if se then
+                        pcall(function() se:FireServer("update",0,0,0.01574012587661855,0,1,0,0,false,false) end)
+                        pcall(function() se:FireServer("update",1528.0975092739798,0.2159512453630101,0.008228921768022701,1,1,0.011235255204606175,0,false,true) end)
+                        pcall(function() se:FireServer("update",1528.09750927398,0.21595124536301,0.017836398435974843,0,1,0.011234251546781591,0,false,true) end)
+                        pcall(function() se:FireServer("update",1528.0975092740948,0.2159512453629487,0.003001242585014552,1,1,0.102307067614691,0,false,true) end)
+                        pcall(function() se:FireServer("update",1528.0975092741319,0.21595124536292837,0.003053680411539972,1,1,0.10509117176000646,0,false,true) end)
+                        pcall(function() se:FireServer("update",1528.097509274284,0.21595124536284777,0.00313649822055595,1,1,0.11247598716367106,0,false,true) end)
+                        pcall(function() se:FireServer("update",1528.11314422658,0.21594294086658988,0.06607485667336732,1,1,0.711679003529814,0,false,true) end)
+                        pcall(function() se:FireServer("update",9e9,1,0.01,1,1,0.01,0,false,true) end)
+                        pcall(function() se:FireServer("update",9e9,0.5,0.005,0,1,0.005,0,true,true) end)
+                    end
+                end
+                task.wait(0.01)
+            end
+        end)
+    else
+        soundSpamRunning=false
+        if soundSpamThread then task.cancel(soundSpamThread) soundSpamThread=nil end
+        Notify("Sound Spammer","Stopped.",3)
     end
-})
+end })
+
+-- LIGHTS
+MiscTab:CreateSection("Lights")
+
+local strobeLightsRunning=false local strobeLightsThread=nil
+MiscTab:CreateToggle({ Name="Strobe Lights", CurrentValue=false, Flag="StrobeLights", Callback=function(state)
+    strobeLightsRunning=state
+    if state then
+        Notify("Strobe Lights","Started!",3)
+        strobeLightsThread=task.spawn(function()
+            local i=0
+            while strobeLightsRunning do
+                local car=GetCar()
+                if car then
+                    local lights=car:FindFirstChild("LIGHTS")
+                    if lights then
+                        pcall(function() lights:FireServer("Lights", i) end)
+                        i = (i + 1) % 3
+                    end
+                end
+                task.wait(0.05)
+            end
+        end)
+    else
+        strobeLightsRunning=false
+        if strobeLightsThread then task.cancel(strobeLightsThread) strobeLightsThread=nil end
+        Notify("Strobe Lights","Stopped.",3)
+    end
+end })
+
+MiscTab:CreateSection("Utilities")
+MiscTab:CreateButton({ Name="Re-Apply All",   Callback=function() ApplyAll() Notify("Vehicle Modifier","All settings re-applied!",3) end })
+MiscTab:CreateButton({ Name="Reload From Car",Callback=function() LoadFromCar() Notify("Vehicle Modifier","Reloaded from car!",3) end })
+MiscTab:CreateButton({ Name="Telekinesis Gun",Callback=function()
+    local ok=pcall(function() loadstring(game:HttpGet("https://pastebin.com/raw/cJTXQWQx"))() end)
+    Notify("Telekinesis Gun", ok and "Executed!" or "Failed.",3)
+end })
+
+-- ECU
+ECUTab:CreateSection("Engine")
+ECUTab:CreateDropdown({ Name="Drivetrain", Options={"RWD","AWD","FWD"}, CurrentOption={"RWD"}, MultipleOptions=false, Flag="Drivetrain", Callback=function(opts)
+    local selected=opts[1]
+    local car=workspace:FindFirstChild("Vehicles") and workspace.Vehicles:FindFirstChild(LocalPlayer.Name.."'s Vehicle")
+    if not car then return end
+    local tune=car:FindFirstChild("A-Chassis Tune") if not tune then return end
+    local ok,module=pcall(require,tune)
+    if ok and module and module.Config then module.Config.Drivetrain=selected Notify("ECU","Drivetrain: "..selected..". Jump out & back in!",4) end
+end })
+
+local velocityEnabled=false
+ECUTab:CreateToggle({ Name="Enable Speed Modifier", CurrentValue=false, Flag="SpeedModifier", Callback=function(v)
+    velocityEnabled=v Notify("Speed Modifier", v and "Enabled! W=accel S=brake P=stop" or "Disabled.",3)
+end })
 
 RunService.Stepped:Connect(function()
     if not velocityEnabled then return end
-    local Character = LocalPlayer.Character
-    if Character and typeof(Character) == "Instance" then
-        local Humanoid = Character:FindFirstChildWhichIsA("Humanoid")
-        if Humanoid and typeof(Humanoid) == "Instance" then
-            local SeatPart = Humanoid.SeatPart
-            if SeatPart and typeof(SeatPart) == "Instance" and SeatPart:IsA("VehicleSeat") then
-                -- Acceleration (W)
-                if UserInputService:IsKeyDown(velocityEnabledKeyCode) then
-                    SeatPart.AssemblyLinearVelocity *= Vector3.new(1 + velocityMult, 1, 1 + velocityMult)
-                end
-                -- Braking (S)
-                if UserInputService:IsKeyDown(qbEnabledKeyCode) then
-                    SeatPart.AssemblyLinearVelocity *= Vector3.new(1 - velocityMult2, 1, 1 - velocityMult2)
-                end
-                -- Stop vehicle (P)
-                if UserInputService:IsKeyDown(stopKeyCode) then
-                    SeatPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    SeatPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                end
-            end
-        end
-    end
+    local char=LocalPlayer.Character if not char then return end
+    local hum=char:FindFirstChildWhichIsA("Humanoid") if not hum then return end
+    local seat=hum.SeatPart if not seat or not seat:IsA("VehicleSeat") then return end
+    if UserInputService:IsKeyDown(Enum.KeyCode.W) then seat.AssemblyLinearVelocity*=Vector3.new(1.025,1,1.025) end
+    if UserInputService:IsKeyDown(Enum.KeyCode.S) then seat.AssemblyLinearVelocity*=Vector3.new(0.85,1,0.85) end
+    if UserInputService:IsKeyDown(Enum.KeyCode.P) then seat.AssemblyLinearVelocity=Vector3.new(0,0,0) seat.AssemblyAngularVelocity=Vector3.new(0,0,0) end
 end)
 
-local ecuFinalDriveInput = nil
-ECUTab:Input({
-    Title = "Final Drive",
-    Placeholder = "",
-    Callback = function(text)
-        local numValue = tonumber(text)
-        if not numValue or numValue < 0.01 or numValue > 5 then
-            return
-        end
-        ecuFinalDriveInput = numValue
-        local carName = LocalPlayer.Name .. "'s Vehicle"
-        local vehicles = workspace:FindFirstChild("Vehicles")
-        if not vehicles then
-            WindUI:Notify({Title = "Error", Content = "Vehicles not found."})
-            return
-        end
-        local car = vehicles:FindFirstChild(carName)
-        if not car then return end
-        local tune = car:FindFirstChild("A-Chassis Tune")
-        if not tune then
-            WindUI:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
-            return
-        end
-        local success, module = pcall(require, tune)
-        if success and module then
-            if ecuDefaultFinalDrive == nil then
-                ecuDefaultFinalDrive = module.FinalDrive
-            end
-            module.FinalDrive = ecuFinalDriveInput
-            WindUI:Notify({Title = "Success", Content = "Final Drive set to: " .. string.format("%.3f", ecuFinalDriveInput)})
-        else
-            WindUI:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
-        end
-    end
-})
+ECUTab:CreateInput({ Name="Final Drive", PlaceholderText="0.01 – 5.0", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="FinalDrive", Callback=function(text)
+    local n=tonumber(text) if not n or n<0.01 or n>5 then return end
+    local car=workspace:FindFirstChild("Vehicles") and workspace.Vehicles:FindFirstChild(LocalPlayer.Name.."'s Vehicle")
+    if not car then return end
+    local tune=car:FindFirstChild("A-Chassis Tune") if not tune then return end
+    local ok,module=pcall(require,tune)
+    if ok and module then module.FinalDrive=n Notify("ECU","Final Drive: "..string.format("%.3f",n),3) end
+end })
 
-local ecuRedlineInput = nil
-ECUTab:Slider({
-    Title = "Redline",
-    Desc = "",
-    Step = 1000,
-    Value = {
-        Min = 1000,
-        Max = 50000,
-        Default = 1000,
-    },
-    Callback = function(value)
-        ecuRedlineInput = value
-        local carName = LocalPlayer.Name .. "'s Vehicle"
-        local vehicles = workspace:FindFirstChild("Vehicles")
-        if not vehicles then
-            WindUI:Notify({Title = "Error", Content = "Vehicles not found."})
-            return
-        end
-        local car = vehicles:FindFirstChild(carName)
-        if not car then return end
-        local tune = car:FindFirstChild("A-Chassis Tune")
-        if not tune then
-            WindUI:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
-            return
-        end
-        local success, module = pcall(require, tune)
-        if success and module then
-            if ecuDefaultRedline == nil then
-                ecuDefaultRedline = module.Redline
-            end
-            module.Redline = ecuRedlineInput
-        else
-            WindUI:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
-        end
-    end
-})
+ECUTab:CreateSlider({ Name="Redline", Range={1000,50000}, Increment=1000, CurrentValue=1000, Flag="Redline", Callback=function(v)
+    local car=workspace:FindFirstChild("Vehicles") and workspace.Vehicles:FindFirstChild(LocalPlayer.Name.."'s Vehicle")
+    if not car then return end
+    local tune=car:FindFirstChild("A-Chassis Tune") if not tune then return end
+    local ok,module=pcall(require,tune) if ok and module then module.Redline=v end
+end })
 
-local ecuPeakRPMInput = nil
-ECUTab:Slider({
-    Title = "RPM",
-    Desc = "",
-    Step = 1000,
-    Value = {
-        Min = 1000,
-        Max = 50000,
-        Default = 1000,
-    },
-    Callback = function(value)
-        ecuPeakRPMInput = value
-        local carName = LocalPlayer.Name .. "'s Vehicle"
-        local vehicles = workspace:FindFirstChild("Vehicles")
-        if not vehicles then
-            WindUI:Notify({Title = "Error", Content = "Vehicles not found."})
-            return
-        end
-        local car = vehicles:FindFirstChild(carName)
-        if not car then return end
-        local tune = car:FindFirstChild("A-Chassis Tune")
-        if not tune then
-            WindUI:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
-            return
-        end
-        local success, module = pcall(require, tune)
-        if success and module then
-            if ecuDefaultPeakRPM == nil then
-                ecuDefaultPeakRPM = module.PeakRPM
-            end
-            module.PeakRPM = ecuPeakRPMInput
-        else
-            WindUI:Notify({Title = "Error", Content = "Failed to require A-Chassis Tune."})
-        end
-    end
-})
+ECUTab:CreateSlider({ Name="Peak RPM", Range={1000,50000}, Increment=1000, CurrentValue=1000, Flag="PeakRPM", Callback=function(v)
+    local car=workspace:FindFirstChild("Vehicles") and workspace.Vehicles:FindFirstChild(LocalPlayer.Name.."'s Vehicle")
+    if not car then return end
+    local tune=car:FindFirstChild("A-Chassis Tune") if not tune then return end
+    local ok,module=pcall(require,tune) if ok and module then module.PeakRPM=v end
+end })
 
-ECUTab:Section({ Title = "Gearbox" })
-ECUTab:Button({
-    Title = "Unlock Gearbox",
-    Callback = function()
-        local carName = LocalPlayer.Name .. "'s Vehicle"
-        local vehicles = workspace:FindFirstChild("Vehicles")
-        if not vehicles then
-            WindUI:Notify({Title = "Error", Content = "Vehicles not found."})
-            return
-        end
-        local car = vehicles:FindFirstChild(carName)
-        if not car then return end
-        local tune = car:FindFirstChild("A-Chassis Tune")
-        if not tune then
-            WindUI:Notify({Title = "Error", Content = "A-Chassis Tune not found."})
-            return
-        end
-        local success, module = pcall(require, tune)
-        if success and module and module.TransModes then
-            if module.TransModes[1] == "Auto" and module.TransModes[2] == "Semi" and module.TransModes[3] == "Manual" then
-                WindUI:Notify({Title = "Gearbox Unlocker", Content = "The gearbox is already unlocked."})
-            else
-                module.TransModes = {"Auto", "Semi", "Manual"}
-                WindUI:Notify({Title = "Gearbox Unlocker", Content = "Gearbox unlocked successfully."})
-            end
+ECUTab:CreateSection("Gearbox")
+ECUTab:CreateButton({ Name="Unlock Gearbox", Callback=function()
+    local car=workspace:FindFirstChild("Vehicles") and workspace.Vehicles:FindFirstChild(LocalPlayer.Name.."'s Vehicle")
+    if not car then return end
+    local tune=car:FindFirstChild("A-Chassis Tune") if not tune then return end
+    local ok,module=pcall(require,tune)
+    if ok and module and module.TransModes then
+        if module.TransModes[1]=="Auto" and module.TransModes[2]=="Semi" and module.TransModes[3]=="Manual" then
+            Notify("Gearbox","Already unlocked.",3)
         else
-            WindUI:Notify({Title = "Error", Content = "Failed to unlock gearbox."})
+            module.TransModes={"Auto","Semi","Manual"}
+            Notify("Gearbox","Unlocked successfully.",3)
         end
     end
-})
+end })
+
+ApplyAll()
