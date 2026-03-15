@@ -1,3 +1,68 @@
+local _call6 = game:GetService('TweenService')
+
+game:GetService('CoreGui')
+game:GetService('Lighting')
+
+local _LocalPlayer11 = game:GetService('Players').LocalPlayer
+local _ = _LocalPlayer11.DisplayName
+local _call16 = Instance.new('ScreenGui')
+
+_call16.IgnoreGuiInset = true
+_call16.ResetOnSpawn = false
+_call16.Parent = _LocalPlayer11:FindFirstChildOfClass('PlayerGui')
+
+local _call18 = Instance.new('Frame')
+
+_call18.Size = UDim2.new(1, 0, 1, 0)
+_call18.BackgroundTransparency = 1
+_call18.Parent = _call16
+
+local _call22 = Instance.new('ImageLabel')
+
+_call22.Size = UDim2.new(0, 120, 0, 120)
+_call22.Position = UDim2.new(0.5, -185, 0.5, -60)
+_call22.BackgroundTransparency = 1
+_call22.ImageTransparency = 1
+_call22.Image = 'rbxassetid://78968317665673'
+_call22.Parent = _call18
+
+local _call28 = Instance.new('TextLabel')
+
+_call28.Text = 'VANTA'
+_call28.Font = Enum.Font.MontserratBold
+_call28.TextColor3 = Color3.new(1, 1, 1)
+_call28.TextSize = 72
+_call28.BackgroundTransparency = 1
+_call28.TextTransparency = 1
+_call28.Size = UDim2.new(0, 400, 0, 100)
+_call28.Position = UDim2.new(0.5, -165, 0.5, -55)
+_call28.Parent = _call18
+
+local _call42 = _call6:Create(_call22, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {ImageTransparency = 0})
+
+_call42:Play()
+task.wait(0.4)
+
+_call28.Position = UDim2.new(0.5, -185, 0.5, -55)
+_call28.TextTransparency = 1
+
+local _call56 = _call6:Create(_call28, TweenInfo.new(1.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+    TextTransparency = 0,
+    Position = UDim2.new(0.5, -163, 0.5, -55),
+})
+
+_call56:Play()
+task.wait(1.6)
+
+local _call62 = _call6:Create(_call22, TweenInfo.new(0.6), {ImageTransparency = 1})
+
+_call62:Play()
+
+local _call68 = _call6:Create(_call28, TweenInfo.new(0.6), {TextTransparency = 1})
+
+_call68:Play()
+task.wait(0.7)
+_call16:Destroy()
 local VANTA = loadstring(game:HttpGet("https://pastebin.com/raw/DsBH9hnF"))()
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Anti-Kick/main/Anti-Kick.lua"))()
