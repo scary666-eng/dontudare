@@ -425,7 +425,7 @@ TeleportTab:Button({
         local player = game.Players.LocalPlayer
         local character = player.Character or player.CharacterAdded:Wait()
         local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-        humanoidRootPart.CFrame = CFrame.new(5.512490272521973, 511.2376403808594, -16.91254425048828)
+        humanoidRootPart.CFrame = CFrame.new(358, 523, 12)
         VANTA:Notify({
             Title = "Teleport",
             Content = "You have been teleported to spawn."
@@ -440,7 +440,7 @@ TeleportTab:Button({
         local player = game.Players.LocalPlayer
         local character = player.Character or player.CharacterAdded:Wait()
         local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-        humanoidRootPart.CFrame = CFrame.new(13.602983474731445, 511.2393798828125, 35.73230743408203)
+        humanoidRootPart.CFrame = CFrame.new(362, 526, 57)
         VANTA:Notify({
             Title = "Teleport",
             Content = "You have been teleported to the voting room."
@@ -455,7 +455,7 @@ TeleportTab:Button({
         local player = game.Players.LocalPlayer
         local character = player.Character or player.CharacterAdded:Wait()
         local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-        humanoidRootPart.CFrame = CFrame.new(-28.42108917236328, 525.165283203125, 64.25765228271484)
+        humanoidRootPart.CFrame = CFrame.new(319, 538, 90)
         VANTA:Notify({
             Title = "Teleport",
             Content = "You have been teleported to the secret room."
