@@ -118,7 +118,7 @@ local SteerTab = Window:CreateTab("Steering",         4483362458)
 local TiresTab = Window:CreateTab("Tires",            4483362458)
 local ATMTab   = Window:CreateTab("ATM Farm",         4483362458)
 local MiscTab  = Window:CreateTab("Misc",             4483362458)
-local ECUTab   = Window:CreateTab("ECU",              4483362458)
+local ECUTab   = Window:CreateTab("Car SFX",              4483362458)
 
 local function GetCar()
     local char = LocalPlayer.Character
@@ -744,29 +744,6 @@ MiscTab:CreateButton({ Name="Telekinesis Gun",Callback=function()
 end })
 
 -- ECU
-ECUTab:CreateSection("Engine")
-ECUTab:CreateDropdown({ Name="Drivetrain", Options={"RWD","AWD","FWD"}, CurrentOption={"RWD"}, MultipleOptions=false, Flag="Drivetrain", Callback=function(opts)
-    local module=GetTune() if not module then Notify("ECU","Tune not found.",3) return end
-    module.Config=opts[1] Notify("ECU","Drivetrain: "..opts[1]..". Jump out & back in!",4)
-end })
-
-ECUTab:CreateSlider({ Name="Redline RPM", Range={1000,50000}, Increment=100, CurrentValue=37000, Flag="Redline", Callback=function(v)
-    local module=GetTune() if not module then return end
-    module.Redline=v module.E_Redline=v module.ShiftRPM=v-196
-    Notify("ECU","Redline set to "..v..". Jump out & back in!",4)
-end })
-
-ECUTab:CreateSlider({ Name="Peak RPM", Range={1000,50000}, Increment=100, CurrentValue=42000, Flag="PeakRPM", Callback=function(v)
-    local module=GetTune() if not module then return end
-    module.PeakRPM=v module.PeakTorqueRPM=v
-    Notify("ECU","Peak RPM set to "..v..". Jump out & back in!",4)
-end })
-
-ECUTab:CreateSlider({ Name="Turbo Boost", Range={0,20}, Increment=0.1, CurrentValue=2.6, Flag="TurboBoost", Callback=function(v)
-    local module=GetTune() if not module then return end
-    module.TurboBoost=v module.T_Boost=v
-    Notify("ECU","Turbo Boost set to "..v..". Jump out & back in!",4)
-end })
 
 ECUTab:CreateSection("Turbo Noise")
 local turboNoiseEnabled = false
@@ -808,17 +785,621 @@ task.spawn(function()
     end
 end)
 
-ECUTab:CreateSection("Gearbox")
-ECUTab:CreateButton({ Name="Unlock Gearbox", Callback=function()
-    local module=GetTune() if not module then return end
-    if module.TransModes then
-        if module.TransModes[1]=="Auto" and module.TransModes[2]=="Semi" and module.TransModes[3]=="Manual" then
-            Notify("Gearbox","Already unlocked.",3)
-        else
-            module.TransModes={"Auto","Semi","Manual"}
-            Notify("Gearbox","Unlocked! Jump out & back in.",4)
-        end
-    end
-end })
+-- ── Universal Tune Finder ─────────────────────────────────────────────────────
+-- Finds the A-Chassis Tune module from whatever vehicle the local player
+-- is currently seated in. Works for any account, any game, any car.
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Tune = nil
+
+local function findTuneInModel(model)
+	for _, v in ipairs(model:GetDescendants()) do
+		if v:IsA("ModuleScript") and (v.Name == "A-Chassis Tune" or v.Name == "Tune") then
+			return v
+		end
+	end
+	return nil
+end
+
+local function tryLoadFromSeat(seat)
+	local current = seat.Parent
+	while current and current ~= workspace do
+		if current:IsA("Model") then
+			local mod = findTuneInModel(current)
+			if mod then
+				Tune = require(mod)
+				return true
+			end
+		end
+		current = current.Parent
+	end
+	return false
+end
+
+local function tryLoad()
+	local char = LocalPlayer.Character
+	if not char then return false end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if not hum or not hum.SeatPart then return false end
+	return tryLoadFromSeat(hum.SeatPart)
+end
+
+if not tryLoad() then
+	Rayfield:Notify({
+		Title = "A-Chassis Modifier",
+		Content = "Sit in an A-Chassis vehicle to load the tuner.",
+		Duration = 5,
+		Image = 4483362458,
+	})
+
+	local function hookHumanoid(char)
+		local hum = char:WaitForChild("Humanoid")
+		hum:GetPropertyChangedSignal("SeatPart"):Connect(function()
+			if hum.SeatPart and not Tune then
+				if tryLoadFromSeat(hum.SeatPart) then
+					Rayfield:Notify({
+						Title = "A-Chassis Modifier",
+						Content = "Vehicle detected! Tune loaded.",
+						Duration = 3,
+						Image = 4483362458,
+					})
+				end
+			end
+		end)
+	end
+
+	if LocalPlayer.Character then
+		hookHumanoid(LocalPlayer.Character)
+	end
+	LocalPlayer.CharacterAdded:Connect(hookHumanoid)
+
+	repeat task.wait(0.2) until Tune ~= nil
+end
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+--  SINGLE TAB: ECU
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+local ECUTab = Window:CreateTab("ECU", 4483362458)
+
+-- ─── ENGINE ──────────────────────────────────────────────────────────────────
+
+ECUTab:CreateSection("Engine - Torque & RPM")
+
+ECUTab:CreateSlider({
+	Name = "Peak Torque",
+	Range = {50, 2000},
+	Increment = 10,
+	Suffix = "Nm",
+	CurrentValue = Tune.PeakTorque,
+	Callback = function(v) Tune.PeakTorque = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Peak Torque RPM",
+	Range = {500, 10000},
+	Increment = 50,
+	Suffix = "RPM",
+	CurrentValue = Tune.PeakTorqueRPM,
+	Callback = function(v) Tune.PeakTorqueRPM = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Idle RPM",
+	Range = {400, 2000},
+	Increment = 10,
+	Suffix = "RPM",
+	CurrentValue = Tune.IdleRPM,
+	Callback = function(v) Tune.IdleRPM = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Idle Torque",
+	Range = {10, 500},
+	Increment = 5,
+	Suffix = "Nm",
+	CurrentValue = Tune.IdleTorque,
+	Callback = function(v) Tune.IdleTorque = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Redline",
+	Range = {2000, 20000},
+	Increment = 100,
+	Suffix = "RPM",
+	CurrentValue = Tune.Redline,
+	Callback = function(v) Tune.Redline = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Redline Torque",
+	Range = {50, 1000},
+	Increment = 10,
+	Suffix = "Nm",
+	CurrentValue = Tune.RedlineTorque,
+	Callback = function(v) Tune.RedlineTorque = v end,
+})
+
+ECUTab:CreateSection("Engine - Rev Behaviour")
+
+ECUTab:CreateSlider({
+	Name = "Rev Accel",
+	Range = {10, 800},
+	Increment = 10,
+	CurrentValue = Tune.RevAccel,
+	Callback = function(v) Tune.RevAccel = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Rev Decay",
+	Range = {10, 500},
+	Increment = 5,
+	CurrentValue = Tune.RevDecay,
+	Callback = function(v) Tune.RevDecay = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Flywheel",
+	Range = {500, 20000},
+	Increment = 100,
+	CurrentValue = Tune.Flywheel,
+	Callback = function(v) Tune.Flywheel = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Throttle Accel",
+	Range = {0.1, 10},
+	Increment = 0.1,
+	CurrentValue = Tune.ThrotAccel,
+	Callback = function(v) Tune.ThrotAccel = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Throttle Decel",
+	Range = {0.1, 10},
+	Increment = 0.1,
+	CurrentValue = Tune.ThrotDecel,
+	Callback = function(v) Tune.ThrotDecel = v end,
+})
+
+ECUTab:CreateSection("Engine - Forced Induction")
+
+ECUTab:CreateSlider({
+	Name = "Turbochargers",
+	Range = {0, 4},
+	Increment = 1,
+	CurrentValue = Tune.Turbochargers,
+	Callback = function(v) Tune.Turbochargers = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Turbo Boost",
+	Range = {0, 40},
+	Increment = 0.1,
+	Suffix = "psi",
+	CurrentValue = Tune.T_Boost,
+	Callback = function(v) Tune.T_Boost = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Turbo Peak RPM",
+	Range = {500, 8000},
+	Increment = 50,
+	Suffix = "RPM",
+	CurrentValue = Tune.T_PeakRPM,
+	Callback = function(v) Tune.T_PeakRPM = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Turbo Size",
+	Range = {1, 30},
+	Increment = 0.1,
+	CurrentValue = Tune.T_Size,
+	Callback = function(v) Tune.T_Size = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Superchargers",
+	Range = {0, 2},
+	Increment = 1,
+	CurrentValue = Tune.Superchargers,
+	Callback = function(v) Tune.Superchargers = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Supercharger Boost",
+	Range = {0, 30},
+	Increment = 0.1,
+	Suffix = "psi",
+	CurrentValue = Tune.S_Boost,
+	Callback = function(v) Tune.S_Boost = v end,
+})
+
+ECUTab:CreateSection("Engine - VVL")
+
+ECUTab:CreateSlider({
+	Name = "VVL Torque",
+	Range = {0, 500},
+	Increment = 5,
+	Suffix = "Nm",
+	CurrentValue = Tune.VVLTorque,
+	Callback = function(v) Tune.VVLTorque = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "VVL RPM",
+	Range = {1000, 12000},
+	Increment = 100,
+	Suffix = "RPM",
+	CurrentValue = Tune.VVLRPM,
+	Callback = function(v) Tune.VVLRPM = v end,
+})
+
+-- ─── TRANSMISSION ─────────────────────────────────────────────────────────────
+
+ECUTab:CreateSection("Transmission - Drive & Speed")
+
+ECUTab:CreateDropdown({
+	Name = "Drivetrain Config",
+	Options = {"RWD", "FWD", "AWD"},
+	CurrentOption = {Tune.Config},
+	Callback = function(v) Tune.Config = v[1] end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Final Drive",
+	Range = {1.0, 8.0},
+	Increment = 0.01,
+	CurrentValue = Tune.FinalDrive,
+	Callback = function(v) Tune.FinalDrive = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Speed Limit",
+	Range = {50, 500},
+	Increment = 5,
+	Suffix = "km/h",
+	CurrentValue = Tune.SpeedLimit,
+	Callback = function(v) Tune.SpeedLimit = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Reverse Speed",
+	Range = {10, 150},
+	Increment = 1,
+	Suffix = "km/h",
+	CurrentValue = Tune.ReverseSpeed,
+	Callback = function(v) Tune.ReverseSpeed = v end,
+})
+
+ECUTab:CreateSection("Transmission - Gear Ratios")
+
+local gearLabels = {"Reverse", "Neutral", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"}
+for i, ratio in ipairs(Tune.Ratios) do
+	local label = gearLabels[i] or ("Gear " .. i)
+	ECUTab:CreateSlider({
+		Name = label .. " Ratio",
+		Range = {0.1, 8.0},
+		Increment = 0.001,
+		CurrentValue = ratio,
+		Callback = function(v) Tune.Ratios[i] = v end,
+	})
+end
+
+ECUTab:CreateSection("Transmission - Auto Shift")
+
+ECUTab:CreateDropdown({
+	Name = "Auto Shift Mode",
+	Options = {"Speed", "RPM"},
+	CurrentOption = {Tune.AutoShiftMode},
+	Callback = function(v) Tune.AutoShiftMode = v[1] end,
+})
+
+ECUTab:CreateDropdown({
+	Name = "Auto Shift Type",
+	Options = {"DCT", "Torque"},
+	CurrentOption = {Tune.AutoShiftType},
+	Callback = function(v) Tune.AutoShiftType = v[1] end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Shift Up Threshold",
+	Range = {-1000, 0},
+	Increment = 10,
+	CurrentValue = Tune.AutoUpThresh,
+	Callback = function(v) Tune.AutoUpThresh = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Shift Down Threshold",
+	Range = {0, 1000},
+	Increment = 10,
+	CurrentValue = Tune.AutoDownThresh,
+	Callback = function(v) Tune.AutoDownThresh = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Shift Up Time",
+	Range = {0.01, 1.0},
+	Increment = 0.01,
+	Suffix = "s",
+	CurrentValue = Tune.ShiftUpTime,
+	Callback = function(v) Tune.ShiftUpTime = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Shift Down Time",
+	Range = {0.01, 1.0},
+	Increment = 0.01,
+	Suffix = "s",
+	CurrentValue = Tune.ShiftDnTime,
+	Callback = function(v) Tune.ShiftDnTime = v end,
+})
+
+ECUTab:CreateSection("Transmission - Clutch")
+
+ECUTab:CreateToggle({
+	Name = "Clutch Enabled",
+	CurrentValue = Tune.Clutch,
+	Callback = function(v) Tune.Clutch = v end,
+})
+
+ECUTab:CreateDropdown({
+	Name = "Clutch Mode",
+	Options = {"New", "Old"},
+	CurrentOption = {Tune.ClutchMode},
+	Callback = function(v) Tune.ClutchMode = v[1] end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Clutch Engage Speed",
+	Range = {1, 100},
+	Increment = 1,
+	CurrentValue = Tune.ClutchEngage,
+	Callback = function(v) Tune.ClutchEngage = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Speed Engage",
+	Range = {1, 100},
+	Increment = 1,
+	CurrentValue = Tune.SpeedEngage,
+	Callback = function(v) Tune.SpeedEngage = v end,
+})
+
+ECUTab:CreateToggle({
+	Name = "Stall",
+	CurrentValue = Tune.Stall,
+	Callback = function(v) Tune.Stall = v end,
+})
+
+-- ─── DIFFERENTIAL ─────────────────────────────────────────────────────────────
+
+ECUTab:CreateSection("Differential - Rear")
+
+ECUTab:CreateSlider({
+	Name = "Rear Diff Power",
+	Range = {0, 100},
+	Increment = 1,
+	CurrentValue = Tune.RDiffPower,
+	Callback = function(v) Tune.RDiffPower = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Rear Diff Coast",
+	Range = {0, 100},
+	Increment = 1,
+	CurrentValue = Tune.RDiffCoast,
+	Callback = function(v) Tune.RDiffCoast = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Rear Diff Preload",
+	Range = {0, 200},
+	Increment = 1,
+	CurrentValue = Tune.RDiffPreload,
+	Callback = function(v) Tune.RDiffPreload = v end,
+})
+
+ECUTab:CreateSection("Differential - Front")
+
+ECUTab:CreateSlider({
+	Name = "Front Diff Power",
+	Range = {0, 100},
+	Increment = 1,
+	CurrentValue = Tune.FDiffPower,
+	Callback = function(v) Tune.FDiffPower = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Front Diff Coast",
+	Range = {0, 100},
+	Increment = 1,
+	CurrentValue = Tune.FDiffCoast,
+	Callback = function(v) Tune.FDiffCoast = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Front Diff Preload",
+	Range = {0, 200},
+	Increment = 1,
+	CurrentValue = Tune.FDiffPreload,
+	Callback = function(v) Tune.FDiffPreload = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Torque Vector",
+	Range = {0, 1},
+	Increment = 0.01,
+	CurrentValue = Tune.TorqueVector,
+	Callback = function(v) Tune.TorqueVector = v end,
+})
+
+-- ─── BRAKES ───────────────────────────────────────────────────────────────────
+
+ECUTab:CreateSection("Brakes")
+
+ECUTab:CreateSlider({
+	Name = "Brake Force",
+	Range = {100, 5000},
+	Increment = 50,
+	CurrentValue = Tune.BrakeForce,
+	Callback = function(v) Tune.BrakeForce = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Brake Bias (Front %)",
+	Range = {0.1, 0.9},
+	Increment = 0.01,
+	CurrentValue = Tune.BrakeBias,
+	Callback = function(v) Tune.BrakeBias = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "E-Brake Force",
+	Range = {0, 1000},
+	Increment = 10,
+	CurrentValue = Tune.EBrakeForce,
+	Callback = function(v) Tune.EBrakeForce = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Parking Brake Force",
+	Range = {0, 100000},
+	Increment = 500,
+	CurrentValue = Tune.PBrakeForce,
+	Callback = function(v) Tune.PBrakeForce = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Brake Accel",
+	Range = {0.1, 10},
+	Increment = 0.1,
+	CurrentValue = Tune.BrakeAccel,
+	Callback = function(v) Tune.BrakeAccel = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Brake Decel",
+	Range = {0.1, 10},
+	Increment = 0.1,
+	CurrentValue = Tune.BrakeDecel,
+	Callback = function(v) Tune.BrakeDecel = v end,
+})
+
+-- ─── ELECTRONICS ──────────────────────────────────────────────────────────────
+
+ECUTab:CreateSection("Electronics - TCS")
+
+ECUTab:CreateToggle({
+	Name = "TCS Enabled",
+	CurrentValue = Tune.TCSEnabled,
+	Callback = function(v) Tune.TCSEnabled = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "TCS Threshold",
+	Range = {0.5, 20},
+	Increment = 0.5,
+	CurrentValue = Tune.TCSThreshold,
+	Callback = function(v) Tune.TCSThreshold = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "TCS Gradient",
+	Range = {1, 30},
+	Increment = 1,
+	CurrentValue = Tune.TCSGradient,
+	Callback = function(v) Tune.TCSGradient = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "TCS Limit",
+	Range = {0, 1},
+	Increment = 0.01,
+	CurrentValue = Tune.TCSLimit,
+	Callback = function(v) Tune.TCSLimit = v end,
+})
+
+ECUTab:CreateSection("Electronics - ABS")
+
+ECUTab:CreateToggle({
+	Name = "ABS Enabled",
+	CurrentValue = Tune.ABSEnabled,
+	Callback = function(v) Tune.ABSEnabled = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "ABS Threshold",
+	Range = {0.5, 20},
+	Increment = 0.5,
+	CurrentValue = Tune.ABSThreshold,
+	Callback = function(v) Tune.ABSThreshold = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "ABS Gradient",
+	Range = {1, 30},
+	Increment = 1,
+	CurrentValue = Tune.ABSGradient,
+	Callback = function(v) Tune.ABSGradient = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "ABS Limit",
+	Range = {0, 1},
+	Increment = 0.01,
+	CurrentValue = Tune.ABSLimit,
+	Callback = function(v) Tune.ABSLimit = v end,
+})
+
+ECUTab:CreateSection("Electronics - ESC")
+
+ECUTab:CreateToggle({
+	Name = "ESC Enabled",
+	CurrentValue = Tune.ESCEnabled,
+	Callback = function(v) Tune.ESCEnabled = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "ESC Threshold",
+	Range = {0.1, 2},
+	Increment = 0.01,
+	CurrentValue = Tune.ESCThreshold,
+	Callback = function(v) Tune.ESCThreshold = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "ESC Speed",
+	Range = {0, 100},
+	Increment = 1,
+	Suffix = "km/h",
+	CurrentValue = Tune.ESCSpeed,
+	Callback = function(v) Tune.ESCSpeed = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "ESC Throttle Cut %",
+	Range = {0, 100},
+	Increment = 1,
+	CurrentValue = Tune.ESCThrottle,
+	Callback = function(v) Tune.ESCThrottle = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "ESC Brake %",
+	Range = {0, 100},
+	Increment = 1,
+	CurrentValue = Tune.ESCBrake,
+	Callback = function(v) Tune.ESCBrake = v end,
+})
+
+Rayfield:Notify({
+	Title = "A-Chassis Modifier",
+	Content = "ECU loaded! Happy tuning.",
+	Duration = 3,
+	Image = 4483362458,
+})
 
 ApplyAll()
