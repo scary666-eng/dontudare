@@ -656,58 +656,6 @@ MiscTab:CreateToggle({ Name="Strobe Lights", CurrentValue=false, Flag="StrobeLig
     end
 end })
 
-MiscTab:CreateSection("Sumo")
-
-local sumoEnabled = false
-local collisionCache = {}
-
-local function getVehicleBody()
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    local seat = hum and hum.SeatPart
-    if not seat then return end
-    local vehicle = seat:FindFirstAncestorOfClass("Model")
-    if not vehicle then return end
-    return vehicle:FindFirstChild("Body")
-end
-
-local function updateCollisions()
-    local body = getVehicleBody()
-    if not body then return end
-    for _, part in ipairs(body:GetDescendants()) do
-        if part:IsA("BasePart") then
-            if sumoEnabled then
-                if collisionCache[part] == nil then
-                    collisionCache[part] = part.CanCollide
-                end
-                part.CanCollide = false
-            else
-                if collisionCache[part] ~= nil then
-                    part.CanCollide = collisionCache[part]
-                end
-            end
-        end
-    end
-    if not sumoEnabled then
-        collisionCache = {}
-    end
-end
-
-task.spawn(function()
-    while true do
-        updateCollisions()
-        task.wait(0.1)
-    end
-end)
-
-MiscTab:CreateToggle({ Name="Sumo Car (No Collision)", CurrentValue=false, Flag="SumoCar", Callback=function(state)
-    sumoEnabled = state
-    if not state then
-        -- force one final pass to restore everything
-        updateCollisions()
-    end
-    Notify("Sumo Car", state and "No collision enabled!" or "Collision restored!", 3)
-end })
-
 MiscTab:CreateSection("Utilities")
 MiscTab:CreateButton({ Name="Re-Apply All",   Callback=function() ApplyAll() Notify("Vehicle Modifier","All settings re-applied!",3) end })
 MiscTab:CreateButton({ Name="Reload From Car",Callback=function() LoadFromCar() Notify("Vehicle Modifier","Reloaded from car!",3) end })
@@ -727,9 +675,14 @@ ECUTab:CreateDropdown({ Name="Drivetrain", Options={"RWD","AWD","FWD"}, CurrentO
     if ok and module and module.Config then module.Config.Drivetrain=selected Notify("ECU","Drivetrain: "..selected..". Jump out & back in!",4) end
 end })
 
-local velocityEnabled=false
-ECUTab:CreateToggle({ Name="Enable Speed Modifier", CurrentValue=false, Flag="SpeedModifier", Callback=function(v)
-    velocityEnabled=v Notify("Speed Modifier", v and "Enabled! W=accel S=brake P=stop" or "Disabled.",3)
+ECUTab:CreateToggle({ Name="Enable Speed Modifier [LOCKED]", CurrentValue=false, Flag="SpeedModifier", Callback=function(v)
+    if v then
+        -- immediately force it back off
+        velocityEnabled = false
+        Notify("Speed Modifier","This feature is locked.",3)
+        -- re-set the toggle back to false via flag
+        Rayfield.Flags["SpeedModifier"].Value = false
+    end
 end })
 
 RunService.Stepped:Connect(function()
