@@ -750,12 +750,6 @@ ECUTab:CreateDropdown({ Name="Drivetrain", Options={"RWD","AWD","FWD"}, CurrentO
     module.Config=opts[1] Notify("ECU","Drivetrain: "..opts[1]..". Jump out & back in!",4)
 end })
 
-ECUTab:CreateSlider({ Name="Torque", Range={10,20000}, Increment=10, CurrentValue=350, Flag="Torque", Callback=function(v)
-    local module=GetTune() if not module then return end
-    module.Torque=v module.PeakTorque=v
-    Notify("ECU","Torque set to "..v..". Jump out & back in!",4)
-end })
-
 ECUTab:CreateSlider({ Name="Redline RPM", Range={1000,50000}, Increment=100, CurrentValue=37000, Flag="Redline", Callback=function(v)
     local module=GetTune() if not module then return end
     module.Redline=v module.E_Redline=v module.ShiftRPM=v-196
@@ -768,60 +762,17 @@ ECUTab:CreateSlider({ Name="Peak RPM", Range={1000,50000}, Increment=100, Curren
     Notify("ECU","Peak RPM set to "..v..". Jump out & back in!",4)
 end })
 
-ECUTab:CreateSlider({ Name="Max Speed", Range={10,1000}, Increment=5, CurrentValue=330, Flag="MaxSpeed", Callback=function(v)
-    local module=GetTune() if not module then return end
-    module.SpeedLimit=v module.MaxSpeed=v
-    Notify("ECU","Max Speed set to "..v..". Jump out & back in!",4)
-end })
-
 ECUTab:CreateSlider({ Name="Turbo Boost", Range={0,20}, Increment=0.1, CurrentValue=2.6, Flag="TurboBoost", Callback=function(v)
     local module=GetTune() if not module then return end
     module.TurboBoost=v module.T_Boost=v
     Notify("ECU","Turbo Boost set to "..v..". Jump out & back in!",4)
 end })
 
-ECUTab:CreateSlider({ Name="Supercharger Boost", Range={0,20}, Increment=0.1, CurrentValue=0, Flag="SuperchargerBoost", Callback=function(v)
-    local module=GetTune() if not module then return end
-    module.S_Boost=v
-    Notify("ECU","Supercharger Boost set to "..v..". Jump out & back in!",4)
-end })
-
-ECUTab:CreateSlider({ Name="Brake Force", Range={100,10000}, Increment=50, CurrentValue=2200, Flag="BrakePower", Callback=function(v)
-    local module=GetTune() if not module then return end
-    module.BrakeForce=v
-    Notify("ECU","Brake Force set to "..v..". Jump out & back in!",4)
-end })
-
-ECUTab:CreateSlider({ Name="Engine Braking", Range={0,500}, Increment=5, CurrentValue=0, Flag="EngineBraking", Callback=function(v)
-    local module=GetTune() if not module then return end
-    module.EngineBraking=v
-    Notify("ECU","Engine Braking set to "..v..". Jump out & back in!",4)
-end })
-
-ECUTab:CreateSlider({ Name="Weight (kg)", Range={500,5000}, Increment=10, CurrentValue=1760, Flag="Weight", Callback=function(v)
-    local module=GetTune() if not module then return end
-    module.Weight=v
-    Notify("ECU","Weight set to "..v.."kg. Jump out & back in!",4)
-end })
-
-ECUTab:CreateSlider({ Name="Idle RPM", Range={500,3000}, Increment=50, CurrentValue=1100, Flag="IdleRPM", Callback=function(v)
-    local module=GetTune() if not module then return end
-    module.IdleRPM=v module.IgnitionMinRPM=v-300
-    Notify("ECU","Idle RPM set to "..v..". Jump out & back in!",4)
-end })
-
-ECUTab:CreateInput({ Name="Final Drive", PlaceholderText="e.g. 3.9", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="FinalDrive", Callback=function(text)
-    local n=tonumber(text) if not n or n<0.01 or n>10 then return end
-    local module=GetTune() if not module then return end
-    module.FinalDrive=n
-    Notify("ECU","Final Drive set to "..string.format("%.3f",n)..". Jump out & back in!",4)
-end })
-
 ECUTab:CreateSection("Turbo Noise")
 local turboNoiseEnabled = false
 local wasThrottling = false
 local turboSound = Instance.new("Sound")
-turboSound.SoundId = "rbxassetid://136526508138746"
+turboSound.SoundId = "rbxassetid://85049702380035"
 turboSound.Volume = 2
 turboSound.Looped = false
 turboSound.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -847,7 +798,7 @@ task.spawn(function()
         elseif wasThrottling and not throttleDown then
             wasThrottling = false
             task.spawn(function()
-                for i = 1, 3 do
+                for i = 1, 1 do
                     turboSound.TimePosition = 0
                     turboSound:Play()
                     task.wait(0.3)
@@ -868,42 +819,6 @@ ECUTab:CreateButton({ Name="Unlock Gearbox", Callback=function()
             Notify("Gearbox","Unlocked! Jump out & back in.",4)
         end
     end
-end })
-
-ECUTab:CreateInput({ Name="Gear Ratio 1", PlaceholderText="current: 5", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="GearRatio1", Callback=function(text)
-    local n=tonumber(text) if not n then return end
-    local module=GetTune() if not module then return end
-    if module.Ratios then module.Ratios[1]=n Notify("ECU","Gear 1: "..n..". Jump out & back in!",4) end
-end })
-
-ECUTab:CreateInput({ Name="Gear Ratio 2", PlaceholderText="current: 3.2", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="GearRatio2", Callback=function(text)
-    local n=tonumber(text) if not n then return end
-    local module=GetTune() if not module then return end
-    if module.Ratios then module.Ratios[2]=n Notify("ECU","Gear 2: "..n..". Jump out & back in!",4) end
-end })
-
-ECUTab:CreateInput({ Name="Gear Ratio 3", PlaceholderText="current: 2.143", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="GearRatio3", Callback=function(text)
-    local n=tonumber(text) if not n then return end
-    local module=GetTune() if not module then return end
-    if module.Ratios then module.Ratios[3]=n Notify("ECU","Gear 3: "..n..". Jump out & back in!",4) end
-end })
-
-ECUTab:CreateInput({ Name="Gear Ratio 4", PlaceholderText="current: 1.72", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="GearRatio4", Callback=function(text)
-    local n=tonumber(text) if not n then return end
-    local module=GetTune() if not module then return end
-    if module.Ratios then module.Ratios[4]=n Notify("ECU","Gear 4: "..n..". Jump out & back in!",4) end
-end })
-
-ECUTab:CreateInput({ Name="Gear Ratio 5", PlaceholderText="current: 1.313", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="GearRatio5", Callback=function(text)
-    local n=tonumber(text) if not n then return end
-    local module=GetTune() if not module then return end
-    if module.Ratios then module.Ratios[5]=n Notify("ECU","Gear 5: "..n..". Jump out & back in!",4) end
-end })
-
-ECUTab:CreateInput({ Name="Gear Ratio 6", PlaceholderText="current: 1.0", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="GearRatio6", Callback=function(text)
-    local n=tonumber(text) if not n then return end
-    local module=GetTune() if not module then return end
-    if module.Ratios then module.Ratios[6]=n Notify("ECU","Gear 6: "..n..". Jump out & back in!",4) end
 end })
 
 ApplyAll()
