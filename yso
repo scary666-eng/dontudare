@@ -261,6 +261,12 @@ local function NukeVolumes()
     end)
 end
 
+local function RestoreVolumes()
+    for _, v in ipairs(game:GetDescendants()) do
+        if v:IsA("Sound") then pcall(function() v.Volume = 0.5 end) end
+    end
+end
+
 -- FRONT SUSPENSION
 FrontTab:CreateSection("Front Suspension")
 FrontTab:CreateSlider({ Name="Front Ride Height (FSpacer)",  Range={-2,5},  Increment=0.05, CurrentValue=Data.susp.FSpacer,       Flag="FSpacer",       Callback=function(v) Data.susp.FSpacer=v       ApplyAll() end })
@@ -555,7 +561,7 @@ MiscTab:CreateToggle({ Name="Loud Idle", CurrentValue=false, Flag="LoudIdle", Ca
     loudIdleRunning=state
     if state then
         NukeVolumes()
-        Notify("Loud Idle","Started! All volumes set to 9e9.",3)
+        Notify("Loud Idle","Started!",3)
         loudIdleThread=task.spawn(function()
             while loudIdleRunning do
                 local car=GetCar()
@@ -573,6 +579,7 @@ MiscTab:CreateToggle({ Name="Loud Idle", CurrentValue=false, Flag="LoudIdle", Ca
     else
         loudIdleRunning=false
         if loudIdleThread then task.cancel(loudIdleThread) loudIdleThread=nil end
+        RestoreVolumes()
         Notify("Loud Idle","Stopped.",3)
     end
 end })
@@ -582,23 +589,20 @@ MiscTab:CreateToggle({ Name="Sound Spammer", CurrentValue=false, Flag="SoundSpam
     soundSpamRunning=state
     if state then
         NukeVolumes()
-        Notify("Sound Spammer","Started! All volumes set to 9e9.",3)
+        Notify("Sound Spammer","Started!",3)
         soundSpamThread=task.spawn(function()
             while soundSpamRunning do
-                -- Backfire spam x3
                 pcall(function() ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Backfire"):WaitForChild("Backfire"):FireServer("Backfire_ON") end)
                 pcall(function() ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Backfire"):WaitForChild("Backfire"):FireServer("Backfire_ON") end)
                 pcall(function() ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Backfire"):WaitForChild("Backfire"):FireServer("Backfire_ON") end)
                 local car=GetCar()
                 if car then
-                    -- Horn spam
                     local horn=car:FindFirstChild("HornEvent")
                     if horn then
                         pcall(function() horn:FireServer("Play") end)
                         pcall(function() horn:FireServer("Play") end)
                         pcall(function() horn:FireServer("Play") end)
                     end
-                    -- SoundsEvent spam
                     local se=car:FindFirstChild("SoundsEvent")
                     if se then
                         pcall(function() se:FireServer("update",0,0,0.01574012587661855,0,1,0,0,false,false) end)
@@ -618,6 +622,7 @@ MiscTab:CreateToggle({ Name="Sound Spammer", CurrentValue=false, Flag="SoundSpam
     else
         soundSpamRunning=false
         if soundSpamThread then task.cancel(soundSpamThread) soundSpamThread=nil end
+        RestoreVolumes()
         Notify("Sound Spammer","Stopped.",3)
     end
 end })
