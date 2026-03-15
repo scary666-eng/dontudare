@@ -72,6 +72,7 @@ Window:Tag({
 })
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 VANTA:Notify({
@@ -580,10 +581,7 @@ CombatTab:Section({
     Title = "Sherrif",
 })
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
 local AimbotEnabled = false
 local TargetPart = "Head"
 
@@ -628,6 +626,93 @@ CombatTab:Toggle({
     end
 })
 
+CombatTab:Divider()
+
+CombatTab:Section({
+    Title = "Kill Aura",
+})
+
+local killAuraEnabled = false
+local killAuraConnection = nil
+local killAuraRange = 10
+local eliminateRemote = game:GetService("ReplicatedStorage").Remotes.Gameplay.EliminatePlayer
+
+CombatTab:Toggle({
+    Title = "Kill Aura",
+    Type = "Toggle",
+    Value = false,
+    Callback = function(state)
+        killAuraEnabled = state
+
+        VANTA:Notify({
+            Title = "Kill Aura",
+            Content = state and "Kill Aura has been enabled." or "Kill Aura has been disabled."
+        })
+
+        if state then
+            killAuraConnection = RunService.Heartbeat:Connect(function()
+                local character = LocalPlayer.Character
+                if not character then return end
+
+                local hrp = character:FindFirstChild("HumanoidRootPart")
+                local humanoid = character:FindFirstChild("Humanoid")
+                if not hrp or not humanoid or humanoid.Health <= 0 then return end
+
+                -- must have knife
+                local knife = character:FindFirstChildOfClass("Tool")
+                if not knife then
+                    knife = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
+                end
+                if not knife or not knife.Name:lower():find("knife") then return end
+
+                -- equip if not already in hand
+                if not character:FindFirstChildOfClass("Tool") then
+                    humanoid:EquipTool(knife)
+                    task.wait(0.05)
+                end
+
+                for _, p in pairs(Players:GetPlayers()) do
+                    if p ~= LocalPlayer and p.Character then
+                        local targetHRP = p.Character:FindFirstChild("HumanoidRootPart")
+                        local targetHumanoid = p.Character:FindFirstChild("Humanoid")
+
+                        if targetHRP and targetHumanoid and targetHumanoid.Health > 0 then
+                            local distance = (hrp.Position - targetHRP.Position).Magnitude
+
+                            if distance <= killAuraRange then
+                                -- client bring the target to us
+                                targetHRP.CFrame = hrp.CFrame * CFrame.new(0, 0, -2)
+
+                                -- fire eliminate remote with the target player
+                                pcall(function()
+                                    eliminateRemote:FireServer(p)
+                                end)
+
+                                -- small wait between targets to avoid spam
+                                task.wait(0.1)
+                            end
+                        end
+                    end
+                end
+            end)
+        else
+            if killAuraConnection then
+                killAuraConnection:Disconnect()
+                killAuraConnection = nil
+            end
+        end
+    end
+})
+
+CombatTab:Slider({
+    Title = "Kill Aura Range",
+    Step = 1,
+    Value = { Min = 5, Max = 50, Default = 10 },
+    Callback = function(value)
+        killAuraRange = value
+    end
+})
+
 local ESPTab = Window:Tab({
     Title = "ESP",
     Icon = "brick-wall", 
@@ -642,16 +727,6 @@ local function clearAllESP()
         if highlight then highlight:Destroy() end
     end
     espHighlights = {}
-end
-
-local function hasKnife(player)
-    for _, tool in pairs(player.Backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.Name:lower():find("knife") then return true end
-    end
-    for _, tool in pairs(player.Character:GetChildren()) do
-        if tool:IsA("Tool") and tool.Name:lower():find("knife") then return true end
-    end
-    return false
 end
 
 local function hasGun(player)
@@ -898,12 +973,9 @@ local AutofarmTab = Window:Tab({
     Locked = false,
 })
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
 local running = false
 local TELEPORT_DELAY = 3
-local RESCAN_DELAY = 0.5 -- how often to check when no coins exist
+local RESCAN_DELAY = 0.5
 
 local function getCharacter()
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -916,13 +988,11 @@ end
 
 local function getAllCoins()
     local coins = {}
-
     for _, obj in ipairs(workspace:GetDescendants()) do
         if obj:IsA("BasePart") and obj.Name == "Coin_Server" then
             table.insert(coins, obj)
         end
     end
-
     return coins
 end
 
@@ -931,14 +1001,11 @@ local function teleportLoop()
         local hrp = getHumanoidRootPart()
         local coins = getAllCoins()
 
-        -- If no coins exist (between rounds), just wait and keep scanning
         if #coins == 0 then
             task.wait(RESCAN_DELAY)
         else
             for _, coin in ipairs(coins) do
                 if not running then return end
-
-                -- coin might despawn mid-loop
                 if coin and coin.Parent then
                     hrp.CFrame = coin.CFrame + Vector3.new(0, 3, 0)
                     task.wait(TELEPORT_DELAY)
@@ -954,7 +1021,6 @@ AutofarmTab:Toggle({
     Value = false,
     Callback = function(state)
         running = state
-
         if state then
             task.spawn(teleportLoop)
         end
