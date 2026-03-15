@@ -656,6 +656,8 @@ MiscTab:CreateToggle({ Name="Strobe Lights", CurrentValue=false, Flag="StrobeLig
     end
 end })
 
+MiscTab:CreateSection("Sumo")
+
 local sumoEnabled = false
 local collisionCache = {}
 
