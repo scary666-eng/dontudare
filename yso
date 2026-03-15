@@ -134,6 +134,16 @@ local function GetCar()
     return nil
 end
 
+local function GetTune()
+    local car = workspace:FindFirstChild("Vehicles") and workspace.Vehicles:FindFirstChild(LocalPlayer.Name.."'s Vehicle")
+    if not car then return nil end
+    local tune = car:FindFirstChild("A-Chassis Tune")
+    if not tune then return nil end
+    local ok, module = pcall(require, tune)
+    if ok and module then return module end
+    return nil
+end
+
 local function SetEngineValue(car, key, value)
     local eng = car:FindFirstChild("Tuning") and car.Tuning:FindFirstChild("Engine")
     if eng and eng:FindFirstChild(key) then eng[key].Value = value end
@@ -266,6 +276,35 @@ local function RestoreVolumes()
         if v:IsA("Sound") then pcall(function() v.Volume = 0.5 end) end
     end
 end
+
+-- Fix slider text color to black so it's readable on white slider
+task.spawn(function()
+    task.wait(2)
+    local function fixSliderText(gui)
+        for _, obj in ipairs(gui:GetDescendants()) do
+            if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+                if obj.Parent and obj.Parent:IsA("Frame") then
+                    local hasSlider = false
+                    for _, sib in ipairs(obj.Parent:GetChildren()) do
+                        if sib.Name == "SliderButton" or sib.Name == "Fill" or sib.Name == "Slider" then
+                            hasSlider = true break
+                        end
+                    end
+                    if hasSlider then obj.TextColor3 = Color3.fromRGB(0,0,0) end
+                end
+            end
+        end
+    end
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+    playerGui.DescendantAdded:Connect(function(obj)
+        if obj:IsA("TextLabel") and obj.Name == "Value" then
+            obj.TextColor3 = Color3.fromRGB(0,0,0)
+        end
+    end)
+    for _, gui in ipairs(playerGui:GetChildren()) do
+        pcall(function() fixSliderText(gui) end)
+    end
+end)
 
 -- FRONT SUSPENSION
 FrontTab:CreateSection("Front Suspension")
@@ -553,6 +592,46 @@ MiscTab:CreateToggle({ Name="Lowrider Bounce", CurrentValue=false, Flag="Lowride
     else Notify("Lowrider Bounce","Disabled.",3) lowriderToggle=false animateToOriginal() end
 end })
 
+-- SUMO
+local sumoEnabled = false
+local collisionCache = {}
+
+local function getVehicleBody()
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    local seat = hum and hum.SeatPart
+    if not seat then return end
+    local vehicle = seat:FindFirstAncestorOfClass("Model")
+    if not vehicle then return end
+    return vehicle:FindFirstChild("Body")
+end
+
+local function updateCollisions()
+    local body = getVehicleBody()
+    if not body then return end
+    for _, part in ipairs(body:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if sumoEnabled then
+                if collisionCache[part] == nil then collisionCache[part] = part.CanCollide end
+                part.CanCollide = false
+            else
+                if collisionCache[part] ~= nil then part.CanCollide = collisionCache[part] end
+            end
+        end
+    end
+    if not sumoEnabled then collisionCache = {} end
+end
+
+task.spawn(function()
+    while true do updateCollisions() task.wait(0.1) end
+end)
+
+MiscTab:CreateSection("Sumo")
+MiscTab:CreateToggle({ Name="Sumo Car (No Collision)", CurrentValue=false, Flag="SumoCar", Callback=function(state)
+    sumoEnabled = state
+    if not state then updateCollisions() end
+    Notify("Sumo Car", state and "No collision enabled!" or "Collision restored!", 3)
+end })
+
 -- SOUND
 MiscTab:CreateSection("Sound")
 
@@ -667,71 +746,164 @@ end })
 -- ECU
 ECUTab:CreateSection("Engine")
 ECUTab:CreateDropdown({ Name="Drivetrain", Options={"RWD","AWD","FWD"}, CurrentOption={"RWD"}, MultipleOptions=false, Flag="Drivetrain", Callback=function(opts)
-    local selected=opts[1]
-    local car=workspace:FindFirstChild("Vehicles") and workspace.Vehicles:FindFirstChild(LocalPlayer.Name.."'s Vehicle")
-    if not car then return end
-    local tune=car:FindFirstChild("A-Chassis Tune") if not tune then return end
-    local ok,module=pcall(require,tune)
-    if ok and module and module.Config then module.Config.Drivetrain=selected Notify("ECU","Drivetrain: "..selected..". Jump out & back in!",4) end
+    local module=GetTune() if not module then Notify("ECU","Tune not found.",3) return end
+    module.Config=opts[1] Notify("ECU","Drivetrain: "..opts[1]..". Jump out & back in!",4)
 end })
 
-ECUTab:CreateToggle({ Name="Enable Speed Modifier [LOCKED]", CurrentValue=false, Flag="SpeedModifier", Callback=function(v)
-    if v then
-        -- immediately force it back off
-        velocityEnabled = false
-        Notify("Speed Modifier","This feature is locked.",3)
-        -- re-set the toggle back to false via flag
-        Rayfield.Flags["SpeedModifier"].Value = false
+ECUTab:CreateSlider({ Name="Torque", Range={10,20000}, Increment=10, CurrentValue=350, Flag="Torque", Callback=function(v)
+    local module=GetTune() if not module then return end
+    module.Torque=v module.PeakTorque=v
+    Notify("ECU","Torque set to "..v..". Jump out & back in!",4)
+end })
+
+ECUTab:CreateSlider({ Name="Redline RPM", Range={1000,50000}, Increment=100, CurrentValue=37000, Flag="Redline", Callback=function(v)
+    local module=GetTune() if not module then return end
+    module.Redline=v module.E_Redline=v module.ShiftRPM=v-196
+    Notify("ECU","Redline set to "..v..". Jump out & back in!",4)
+end })
+
+ECUTab:CreateSlider({ Name="Peak RPM", Range={1000,50000}, Increment=100, CurrentValue=42000, Flag="PeakRPM", Callback=function(v)
+    local module=GetTune() if not module then return end
+    module.PeakRPM=v module.PeakTorqueRPM=v
+    Notify("ECU","Peak RPM set to "..v..". Jump out & back in!",4)
+end })
+
+ECUTab:CreateSlider({ Name="Max Speed", Range={10,1000}, Increment=5, CurrentValue=330, Flag="MaxSpeed", Callback=function(v)
+    local module=GetTune() if not module then return end
+    module.SpeedLimit=v module.MaxSpeed=v
+    Notify("ECU","Max Speed set to "..v..". Jump out & back in!",4)
+end })
+
+ECUTab:CreateSlider({ Name="Turbo Boost", Range={0,20}, Increment=0.1, CurrentValue=2.6, Flag="TurboBoost", Callback=function(v)
+    local module=GetTune() if not module then return end
+    module.TurboBoost=v module.T_Boost=v
+    Notify("ECU","Turbo Boost set to "..v..". Jump out & back in!",4)
+end })
+
+ECUTab:CreateSlider({ Name="Supercharger Boost", Range={0,20}, Increment=0.1, CurrentValue=0, Flag="SuperchargerBoost", Callback=function(v)
+    local module=GetTune() if not module then return end
+    module.S_Boost=v
+    Notify("ECU","Supercharger Boost set to "..v..". Jump out & back in!",4)
+end })
+
+ECUTab:CreateSlider({ Name="Brake Force", Range={100,10000}, Increment=50, CurrentValue=2200, Flag="BrakePower", Callback=function(v)
+    local module=GetTune() if not module then return end
+    module.BrakeForce=v
+    Notify("ECU","Brake Force set to "..v..". Jump out & back in!",4)
+end })
+
+ECUTab:CreateSlider({ Name="Engine Braking", Range={0,500}, Increment=5, CurrentValue=0, Flag="EngineBraking", Callback=function(v)
+    local module=GetTune() if not module then return end
+    module.EngineBraking=v
+    Notify("ECU","Engine Braking set to "..v..". Jump out & back in!",4)
+end })
+
+ECUTab:CreateSlider({ Name="Weight (kg)", Range={500,5000}, Increment=10, CurrentValue=1760, Flag="Weight", Callback=function(v)
+    local module=GetTune() if not module then return end
+    module.Weight=v
+    Notify("ECU","Weight set to "..v.."kg. Jump out & back in!",4)
+end })
+
+ECUTab:CreateSlider({ Name="Idle RPM", Range={500,3000}, Increment=50, CurrentValue=1100, Flag="IdleRPM", Callback=function(v)
+    local module=GetTune() if not module then return end
+    module.IdleRPM=v module.IgnitionMinRPM=v-300
+    Notify("ECU","Idle RPM set to "..v..". Jump out & back in!",4)
+end })
+
+ECUTab:CreateInput({ Name="Final Drive", PlaceholderText="e.g. 3.9", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="FinalDrive", Callback=function(text)
+    local n=tonumber(text) if not n or n<0.01 or n>10 then return end
+    local module=GetTune() if not module then return end
+    module.FinalDrive=n
+    Notify("ECU","Final Drive set to "..string.format("%.3f",n)..". Jump out & back in!",4)
+end })
+
+ECUTab:CreateSection("Turbo Noise")
+local turboNoiseEnabled = false
+local wasThrottling = false
+local turboSound = Instance.new("Sound")
+turboSound.SoundId = "rbxassetid://136526508138746"
+turboSound.Volume = 2
+turboSound.Looped = false
+turboSound.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+ECUTab:CreateToggle({ Name="Turbo Noise (lift off)", CurrentValue=false, Flag="TurboNoise", Callback=function(v)
+    turboNoiseEnabled = v
+    Notify("Turbo Noise", v and "Enabled! Lift off throttle to hear it." or "Disabled.", 3)
+end })
+
+task.spawn(function()
+    while true do
+        task.wait(0.05)
+        if not turboNoiseEnabled then wasThrottling = false continue end
+        local char = LocalPlayer.Character
+        if not char then continue end
+        local hum = char:FindFirstChildWhichIsA("Humanoid")
+        if not hum then continue end
+        local seat = hum.SeatPart
+        if not seat or not seat:IsA("VehicleSeat") then wasThrottling = false continue end
+        local throttleDown = UserInputService:IsKeyDown(Enum.KeyCode.W) or UserInputService:IsKeyDown(Enum.KeyCode.Up)
+        if throttleDown then
+            wasThrottling = true
+        elseif wasThrottling and not throttleDown then
+            wasThrottling = false
+            task.spawn(function()
+                for i = 1, 3 do
+                    turboSound.TimePosition = 0
+                    turboSound:Play()
+                    task.wait(0.3)
+                end
+            end)
+        end
     end
-end })
-
-RunService.Stepped:Connect(function()
-    if not velocityEnabled then return end
-    local char=LocalPlayer.Character if not char then return end
-    local hum=char:FindFirstChildWhichIsA("Humanoid") if not hum then return end
-    local seat=hum.SeatPart if not seat or not seat:IsA("VehicleSeat") then return end
-    if UserInputService:IsKeyDown(Enum.KeyCode.W) then seat.AssemblyLinearVelocity*=Vector3.new(1.025,1,1.025) end
-    if UserInputService:IsKeyDown(Enum.KeyCode.S) then seat.AssemblyLinearVelocity*=Vector3.new(0.85,1,0.85) end
-    if UserInputService:IsKeyDown(Enum.KeyCode.P) then seat.AssemblyLinearVelocity=Vector3.new(0,0,0) seat.AssemblyAngularVelocity=Vector3.new(0,0,0) end
 end)
-
-ECUTab:CreateInput({ Name="Final Drive", PlaceholderText="0.01 – 5.0", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="FinalDrive", Callback=function(text)
-    local n=tonumber(text) if not n or n<0.01 or n>5 then return end
-    local car=workspace:FindFirstChild("Vehicles") and workspace.Vehicles:FindFirstChild(LocalPlayer.Name.."'s Vehicle")
-    if not car then return end
-    local tune=car:FindFirstChild("A-Chassis Tune") if not tune then return end
-    local ok,module=pcall(require,tune)
-    if ok and module then module.FinalDrive=n Notify("ECU","Final Drive: "..string.format("%.3f",n),3) end
-end })
-
-ECUTab:CreateSlider({ Name="Redline", Range={1000,50000}, Increment=1000, CurrentValue=1000, Flag="Redline", Callback=function(v)
-    local car=workspace:FindFirstChild("Vehicles") and workspace.Vehicles:FindFirstChild(LocalPlayer.Name.."'s Vehicle")
-    if not car then return end
-    local tune=car:FindFirstChild("A-Chassis Tune") if not tune then return end
-    local ok,module=pcall(require,tune) if ok and module then module.Redline=v end
-end })
-
-ECUTab:CreateSlider({ Name="Peak RPM", Range={1000,50000}, Increment=1000, CurrentValue=1000, Flag="PeakRPM", Callback=function(v)
-    local car=workspace:FindFirstChild("Vehicles") and workspace.Vehicles:FindFirstChild(LocalPlayer.Name.."'s Vehicle")
-    if not car then return end
-    local tune=car:FindFirstChild("A-Chassis Tune") if not tune then return end
-    local ok,module=pcall(require,tune) if ok and module then module.PeakRPM=v end
-end })
 
 ECUTab:CreateSection("Gearbox")
 ECUTab:CreateButton({ Name="Unlock Gearbox", Callback=function()
-    local car=workspace:FindFirstChild("Vehicles") and workspace.Vehicles:FindFirstChild(LocalPlayer.Name.."'s Vehicle")
-    if not car then return end
-    local tune=car:FindFirstChild("A-Chassis Tune") if not tune then return end
-    local ok,module=pcall(require,tune)
-    if ok and module and module.TransModes then
+    local module=GetTune() if not module then return end
+    if module.TransModes then
         if module.TransModes[1]=="Auto" and module.TransModes[2]=="Semi" and module.TransModes[3]=="Manual" then
             Notify("Gearbox","Already unlocked.",3)
         else
             module.TransModes={"Auto","Semi","Manual"}
-            Notify("Gearbox","Unlocked successfully.",3)
+            Notify("Gearbox","Unlocked! Jump out & back in.",4)
         end
     end
+end })
+
+ECUTab:CreateInput({ Name="Gear Ratio 1", PlaceholderText="current: 5", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="GearRatio1", Callback=function(text)
+    local n=tonumber(text) if not n then return end
+    local module=GetTune() if not module then return end
+    if module.Ratios then module.Ratios[1]=n Notify("ECU","Gear 1: "..n..". Jump out & back in!",4) end
+end })
+
+ECUTab:CreateInput({ Name="Gear Ratio 2", PlaceholderText="current: 3.2", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="GearRatio2", Callback=function(text)
+    local n=tonumber(text) if not n then return end
+    local module=GetTune() if not module then return end
+    if module.Ratios then module.Ratios[2]=n Notify("ECU","Gear 2: "..n..". Jump out & back in!",4) end
+end })
+
+ECUTab:CreateInput({ Name="Gear Ratio 3", PlaceholderText="current: 2.143", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="GearRatio3", Callback=function(text)
+    local n=tonumber(text) if not n then return end
+    local module=GetTune() if not module then return end
+    if module.Ratios then module.Ratios[3]=n Notify("ECU","Gear 3: "..n..". Jump out & back in!",4) end
+end })
+
+ECUTab:CreateInput({ Name="Gear Ratio 4", PlaceholderText="current: 1.72", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="GearRatio4", Callback=function(text)
+    local n=tonumber(text) if not n then return end
+    local module=GetTune() if not module then return end
+    if module.Ratios then module.Ratios[4]=n Notify("ECU","Gear 4: "..n..". Jump out & back in!",4) end
+end })
+
+ECUTab:CreateInput({ Name="Gear Ratio 5", PlaceholderText="current: 1.313", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="GearRatio5", Callback=function(text)
+    local n=tonumber(text) if not n then return end
+    local module=GetTune() if not module then return end
+    if module.Ratios then module.Ratios[5]=n Notify("ECU","Gear 5: "..n..". Jump out & back in!",4) end
+end })
+
+ECUTab:CreateInput({ Name="Gear Ratio 6", PlaceholderText="current: 1.0", CurrentValue="", RemoveTextAfterFocusLost=false, Flag="GearRatio6", Callback=function(text)
+    local n=tonumber(text) if not n then return end
+    local module=GetTune() if not module then return end
+    if module.Ratios then module.Ratios[6]=n Notify("ECU","Gear 6: "..n..". Jump out & back in!",4) end
 end })
 
 ApplyAll()
