@@ -857,6 +857,160 @@ if not tryLoad() then
 	repeat task.wait(0.2) until Tune ~= nil
 end
 
+-- ── Services ──────────────────────────────────────────────────────────────────
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ── Universal Tune Finder ─────────────────────────────────────────────────────
+-- Finds the A-Chassis Tune module from whatever vehicle the local player
+-- is currently seated in. Works for any account, any game, any car.
+
+local Tune = nil
+
+local function findTuneInModel(model)
+	for _, v in ipairs(model:GetDescendants()) do
+		if v:IsA("ModuleScript") and (v.Name == "A-Chassis Tune" or v.Name == "Tune") then
+			return v
+		end
+	end
+	return nil
+end
+
+local function tryLoadFromSeat(seat)
+	local current = seat.Parent
+	while current and current ~= workspace do
+		if current:IsA("Model") then
+			local mod = findTuneInModel(current)
+			if mod then
+				Tune = require(mod)
+				return true
+			end
+		end
+		current = current.Parent
+	end
+	return false
+end
+
+local function tryLoad()
+	local char = LocalPlayer.Character
+	if not char then return false end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if not hum or not hum.SeatPart then return false end
+	return tryLoadFromSeat(hum.SeatPart)
+end
+
+if not tryLoad() then
+	Rayfield:Notify({
+		Title = "A-Chassis Modifier",
+		Content = "Sit in an A-Chassis vehicle to load the tuner.",
+		Duration = 5,
+		Image = 4483362458,
+	})
+
+	local function hookHumanoid(char)
+		local hum = char:WaitForChild("Humanoid")
+		hum:GetPropertyChangedSignal("SeatPart"):Connect(function()
+			if hum.SeatPart and not Tune then
+				if tryLoadFromSeat(hum.SeatPart) then
+					Rayfield:Notify({
+						Title = "A-Chassis Modifier",
+						Content = "Vehicle detected! Tune loaded.",
+						Duration = 3,
+						Image = 4483362458,
+					})
+				end
+			end
+		end)
+	end
+
+	if LocalPlayer.Character then
+		hookHumanoid(LocalPlayer.Character)
+	end
+	LocalPlayer.CharacterAdded:Connect(hookHumanoid)
+
+	repeat task.wait(0.2) until Tune ~= nil
+end
+
+-- ── Services ──────────────────────────────────────────────────────────────────
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ── Universal Tune Finder ─────────────────────────────────────────────────────
+-- Finds the A-Chassis Tune module from whatever vehicle the local player
+-- is currently seated in. Works for any account, any game, any car.
+
+local Tune = nil
+
+local function findTuneInModel(model)
+	for _, v in ipairs(model:GetDescendants()) do
+		if v:IsA("ModuleScript") and (v.Name == "A-Chassis Tune" or v.Name == "Tune") then
+			return v
+		end
+	end
+	return nil
+end
+
+local function tryLoadFromSeat(seat)
+	local current = seat.Parent
+	while current and current ~= workspace do
+		if current:IsA("Model") then
+			local mod = findTuneInModel(current)
+			if mod then
+				Tune = require(mod)
+				return true
+			end
+		end
+		current = current.Parent
+	end
+	return false
+end
+
+local function tryLoad()
+	local char = LocalPlayer.Character
+	if not char then return false end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if not hum or not hum.SeatPart then return false end
+	return tryLoadFromSeat(hum.SeatPart)
+end
+
+if not tryLoad() then
+	Rayfield:Notify({
+		Title = "A-Chassis Modifier",
+		Content = "Sit in an A-Chassis vehicle to load the tuner.",
+		Duration = 5,
+		Image = 4483362458,
+	})
+
+	local function hookHumanoid(char)
+		local hum = char:WaitForChild("Humanoid")
+		hum:GetPropertyChangedSignal("SeatPart"):Connect(function()
+			if hum.SeatPart and not Tune then
+				if tryLoadFromSeat(hum.SeatPart) then
+					Rayfield:Notify({
+						Title = "A-Chassis Modifier",
+						Content = "Vehicle detected! Tune loaded.",
+						Duration = 3,
+						Image = 4483362458,
+					})
+				end
+			end
+		end)
+	end
+
+	if LocalPlayer.Character then
+		hookHumanoid(LocalPlayer.Character)
+	end
+	LocalPlayer.CharacterAdded:Connect(hookHumanoid)
+
+	repeat task.wait(0.2) until Tune ~= nil
+end
+
 -- ═══════════════════════════════════════════════════════════════════════════════
 --  SINGLE TAB: ECU
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -1393,6 +1547,155 @@ ECUTab:CreateSlider({
 	Increment = 1,
 	CurrentValue = Tune.ESCBrake,
 	Callback = function(v) Tune.ESCBrake = v end,
+})
+
+-- ─── VELOCITY / FLIGHT ────────────────────────────────────────────────────────
+
+local function getSeatPart()
+	local char = LocalPlayer.Character
+	if not char then return nil end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if not hum then return nil end
+	local seat = hum.SeatPart
+	if seat and seat:IsA("VehicleSeat") then return seat end
+	return nil
+end
+
+local function getVehicleFromSeat(seat)
+	local current = seat.Parent
+	while current and current ~= workspace do
+		if current:IsA("Model") then return current end
+		current = current.Parent
+	end
+	return nil
+end
+
+-- State
+local keybindsActive = true
+local flightEnabled = false
+local flightSpeed = 1
+local velocityMult = 0.025
+local velocityKeyCode = Enum.KeyCode.W
+local brakeForce = 0.15
+local brakeKeyCode = Enum.KeyCode.S
+
+-- Flight loop
+RunService.Stepped:Connect(function()
+	if not flightEnabled then return end
+	local seat = getSeatPart()
+	if not seat then return end
+	local vehicle = getVehicleFromSeat(seat)
+	if not vehicle then return end
+	if not vehicle.PrimaryPart then
+		vehicle.PrimaryPart = seat
+	end
+	local cf = vehicle:GetPrimaryPartCFrame()
+	local camLook = workspace.CurrentCamera.CFrame.LookVector
+	local inp = UserInputService
+	if not inp:GetFocusedTextBox() then
+		vehicle:SetPrimaryPartCFrame(
+			CFrame.new(cf.Position, cf.Position + camLook) * CFrame.new(
+				(inp:IsKeyDown(Enum.KeyCode.D) and flightSpeed) or (inp:IsKeyDown(Enum.KeyCode.A) and -flightSpeed) or 0,
+				(inp:IsKeyDown(Enum.KeyCode.E) and flightSpeed / 2) or (inp:IsKeyDown(Enum.KeyCode.Q) and -flightSpeed / 2) or 0,
+				(inp:IsKeyDown(Enum.KeyCode.S) and flightSpeed) or (inp:IsKeyDown(Enum.KeyCode.W) and -flightSpeed) or 0
+			)
+		)
+	end
+	seat.AssemblyLinearVelocity = Vector3.zero
+	seat.AssemblyAngularVelocity = Vector3.zero
+end)
+
+-- Velocity hold loop
+UserInputService.InputBegan:Connect(function(input, gpe)
+	if gpe or not keybindsActive then return end
+	if input.KeyCode == velocityKeyCode then
+		while UserInputService:IsKeyDown(velocityKeyCode) and keybindsActive do
+			task.wait()
+			local seat = getSeatPart()
+			if seat then
+				seat.AssemblyLinearVelocity = seat.AssemblyLinearVelocity * Vector3.new(1 + velocityMult, 1, 1 + velocityMult)
+			end
+		end
+	elseif input.KeyCode == brakeKeyCode then
+		while UserInputService:IsKeyDown(brakeKeyCode) and keybindsActive do
+			task.wait()
+			local seat = getSeatPart()
+			if seat then
+				seat.AssemblyLinearVelocity = seat.AssemblyLinearVelocity * Vector3.new(1 - brakeForce, 1, 1 - brakeForce)
+			end
+		end
+	end
+end)
+
+ECUTab:CreateSection("Flight")
+
+ECUTab:CreateToggle({
+	Name = "Flight Enabled",
+	CurrentValue = false,
+	Callback = function(v) flightEnabled = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Flight Speed",
+	Range = {0, 800},
+	Increment = 1,
+	CurrentValue = 100,
+	Callback = function(v) flightSpeed = v / 100 end,
+})
+
+ECUTab:CreateSection("Acceleration")
+
+ECUTab:CreateToggle({
+	Name = "Speed Boost (Hold W)",
+	CurrentValue = false,
+	Callback = function(v) keybindsActive = v end,
+})
+
+ECUTab:CreateSlider({
+	Name = "Velocity Multiplier (Thousandths)",
+	Range = {0, 50},
+	Increment = 1,
+	CurrentValue = 25,
+	Callback = function(v) velocityMult = v / 1000 end,
+})
+
+ECUTab:CreateSection("Deceleration")
+
+ECUTab:CreateSlider({
+	Name = "Brake Force (Thousandths)",
+	Range = {0, 300},
+	Increment = 1,
+	CurrentValue = 150,
+	Callback = function(v) brakeForce = v / 1000 end,
+})
+
+ECUTab:CreateButton({
+	Name = "Stop Vehicle",
+	Callback = function()
+		local seat = getSeatPart()
+		if seat then
+			seat.AssemblyLinearVelocity = Vector3.zero
+			seat.AssemblyAngularVelocity = Vector3.zero
+		end
+	end,
+})
+
+ECUTab:CreateSection("Springs")
+
+ECUTab:CreateToggle({
+	Name = "Springs Visible",
+	CurrentValue = false,
+	Callback = function(v)
+		local seat = getSeatPart()
+		if not seat then return end
+		local vehicle = getVehicleFromSeat(seat)
+		if not vehicle then return end
+		for _, obj in ipairs(vehicle:GetDescendants()) do
+			if obj:IsA("SpringConstraint") then
+				obj.Visible = v
+			end
+		end
+	end,
 })
 
 Rayfield:Notify({
