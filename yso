@@ -544,6 +544,7 @@ MiscTab:CreateToggle({ Name="Force Entry (Drive Any Car)", CurrentValue=false, F
     end
 end })
 
+
 MiscTab:CreateSection("Ignition & Lowrider")
 MiscTab:CreateButton({ Name="Toggle Other Ignition", Callback=function()
     local h=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -735,6 +736,67 @@ MiscTab:CreateToggle({ Name="Strobe Lights", CurrentValue=false, Flag="StrobeLig
     end
 end })
 
+MiscTab:CreateSection("Fuel")
+local infiniteFuelEnabled = false
+local infiniteFuelCheckConnection = nil
+
+local function getPlayerVehicle()
+    local character = LocalPlayer.Character
+    if not character then return nil end
+    local humanoid = character:FindFirstChildOfClass('Humanoid')
+    if not humanoid then return nil end
+    local seat = humanoid.SeatPart
+    if not seat then return nil end
+    return seat:FindFirstAncestorOfClass('Model')
+end
+
+local function refuelVehicle(vehicle)
+    if not vehicle then return end
+    if vehicle:FindFirstChild('Fuel') then
+        vehicle.Fuel.Value = 9e9
+    end
+end
+
+MiscTab:CreateToggle({
+    Name = "Infinite Fuel",
+    CurrentValue = false,
+    Callback = function(enabled)
+        infiniteFuelEnabled = enabled
+        if enabled then
+            local vehicle = getPlayerVehicle()
+            if vehicle then
+                refuelVehicle(vehicle)
+                Notify("Infinite Fuel", "Activated!", 3)
+            else
+                Notify("Infinite Fuel", "Get in a vehicle first!", 3)
+            end
+            if infiniteFuelCheckConnection then
+                infiniteFuelCheckConnection:Disconnect()
+            end
+            infiniteFuelCheckConnection = RunService.Heartbeat:Connect(function()
+                if not infiniteFuelEnabled then return end
+                local v = getPlayerVehicle()
+                if v then refuelVehicle(v) end
+            end)
+        else
+            if infiniteFuelCheckConnection then
+                infiniteFuelCheckConnection:Disconnect()
+                infiniteFuelCheckConnection = nil
+            end
+            Notify("Infinite Fuel", "Disabled.", 3)
+        end
+    end,
+})
+
+MiscTab:CreateButton({ Name="Get Gas (93)", Callback=function()
+	local args = {
+		47.25,
+		37.79,
+		"93"
+	}
+	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("FuelSystem"):WaitForChild("RefuelVehicle"):FireServer(unpack(args))
+end })
+
 MiscTab:CreateSection("Utilities")
 MiscTab:CreateButton({ Name="Re-Apply All",   Callback=function() ApplyAll() Notify("Vehicle Modifier","All settings re-applied!",3) end })
 MiscTab:CreateButton({ Name="Reload From Car",Callback=function() LoadFromCar() Notify("Vehicle Modifier","Reloaded from car!",3) end })
@@ -857,159 +919,6 @@ if not tryLoad() then
 	repeat task.wait(0.2) until Tune ~= nil
 end
 
--- ── Services ──────────────────────────────────────────────────────────────────
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-
--- ── Universal Tune Finder ─────────────────────────────────────────────────────
--- Finds the A-Chassis Tune module from whatever vehicle the local player
--- is currently seated in. Works for any account, any game, any car.
-
-local Tune = nil
-
-local function findTuneInModel(model)
-	for _, v in ipairs(model:GetDescendants()) do
-		if v:IsA("ModuleScript") and (v.Name == "A-Chassis Tune" or v.Name == "Tune") then
-			return v
-		end
-	end
-	return nil
-end
-
-local function tryLoadFromSeat(seat)
-	local current = seat.Parent
-	while current and current ~= workspace do
-		if current:IsA("Model") then
-			local mod = findTuneInModel(current)
-			if mod then
-				Tune = require(mod)
-				return true
-			end
-		end
-		current = current.Parent
-	end
-	return false
-end
-
-local function tryLoad()
-	local char = LocalPlayer.Character
-	if not char then return false end
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if not hum or not hum.SeatPart then return false end
-	return tryLoadFromSeat(hum.SeatPart)
-end
-
-if not tryLoad() then
-	Rayfield:Notify({
-		Title = "A-Chassis Modifier",
-		Content = "Sit in an A-Chassis vehicle to load the tuner.",
-		Duration = 5,
-		Image = 4483362458,
-	})
-
-	local function hookHumanoid(char)
-		local hum = char:WaitForChild("Humanoid")
-		hum:GetPropertyChangedSignal("SeatPart"):Connect(function()
-			if hum.SeatPart and not Tune then
-				if tryLoadFromSeat(hum.SeatPart) then
-					Rayfield:Notify({
-						Title = "A-Chassis Modifier",
-						Content = "Vehicle detected! Tune loaded.",
-						Duration = 3,
-						Image = 4483362458,
-					})
-				end
-			end
-		end)
-	end
-
-	if LocalPlayer.Character then
-		hookHumanoid(LocalPlayer.Character)
-	end
-	LocalPlayer.CharacterAdded:Connect(hookHumanoid)
-
-	repeat task.wait(0.2) until Tune ~= nil
-end
-
--- ── Services ──────────────────────────────────────────────────────────────────
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-
--- ── Universal Tune Finder ─────────────────────────────────────────────────────
--- Finds the A-Chassis Tune module from whatever vehicle the local player
--- is currently seated in. Works for any account, any game, any car.
-
-local Tune = nil
-
-local function findTuneInModel(model)
-	for _, v in ipairs(model:GetDescendants()) do
-		if v:IsA("ModuleScript") and (v.Name == "A-Chassis Tune" or v.Name == "Tune") then
-			return v
-		end
-	end
-	return nil
-end
-
-local function tryLoadFromSeat(seat)
-	local current = seat.Parent
-	while current and current ~= workspace do
-		if current:IsA("Model") then
-			local mod = findTuneInModel(current)
-			if mod then
-				Tune = require(mod)
-				return true
-			end
-		end
-		current = current.Parent
-	end
-	return false
-end
-
-local function tryLoad()
-	local char = LocalPlayer.Character
-	if not char then return false end
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if not hum or not hum.SeatPart then return false end
-	return tryLoadFromSeat(hum.SeatPart)
-end
-
-if not tryLoad() then
-	Rayfield:Notify({
-		Title = "A-Chassis Modifier",
-		Content = "Sit in an A-Chassis vehicle to load the tuner.",
-		Duration = 5,
-		Image = 4483362458,
-	})
-
-	local function hookHumanoid(char)
-		local hum = char:WaitForChild("Humanoid")
-		hum:GetPropertyChangedSignal("SeatPart"):Connect(function()
-			if hum.SeatPart and not Tune then
-				if tryLoadFromSeat(hum.SeatPart) then
-					Rayfield:Notify({
-						Title = "A-Chassis Modifier",
-						Content = "Vehicle detected! Tune loaded.",
-						Duration = 3,
-						Image = 4483362458,
-					})
-				end
-			end
-		end)
-	end
-
-	if LocalPlayer.Character then
-		hookHumanoid(LocalPlayer.Character)
-	end
-	LocalPlayer.CharacterAdded:Connect(hookHumanoid)
-
-	repeat task.wait(0.2) until Tune ~= nil
-end
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 --  SINGLE TAB: ECU
@@ -1571,7 +1480,7 @@ local function getVehicleFromSeat(seat)
 end
 
 -- State
-local keybindsActive = true
+local keybindsActive = false
 local flightEnabled = false
 local flightSpeed = 1
 local velocityMult = 0.025
