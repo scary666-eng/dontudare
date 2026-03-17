@@ -1,0 +1,770 @@
+-- ─── RIVALS SCRIPT ───────────────────────────────────────────────────────────
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/scary666-eng/dontudare/refs/heads/main/udray"))()
+
+local Players          = game:GetService("Players")
+local LocalPlayer      = Players.LocalPlayer
+local RunService       = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local RS               = game:GetService("ReplicatedStorage")
+
+-- ─── NOTIFY ───────────────────────────────────────────────────────────────────
+local function Notify(title, content, duration)
+    Rayfield:Notify({ Title=title, Content=content, Duration=duration or 3, Image=4483362458 })
+end
+
+-- ─── HELPERS ──────────────────────────────────────────────────────────────────
+local function getChar()  return LocalPlayer.Character end
+local function getHRP()   local c=getChar() return c and c:FindFirstChild("HumanoidRootPart") end
+local function getHum()   local c=getChar() return c and c:FindFirstChildOfClass("Humanoid") end
+
+-- ─── TEAM TRACKING (Rivals uses TeamLocal, not Roblox Teams service) ──────────
+local teammates = {} -- set of player names on our team
+
+local function isTeammate(p)
+    return teammates[p.Name] == true
+end
+
+-- Hook TeamLocal to track assignments
+-- Format observed: FireClient(player, teamId) or FireClient(teamTable)
+local teamLocal = RS:FindFirstChild("TeamLocal")
+if teamLocal and teamLocal:IsA("RemoteEvent") then
+    teamLocal.OnClientEvent:Connect(function(...)
+        local args = {...}
+        teammates = {} -- reset each time team data is pushed
+        -- Try common formats:
+        -- Format A: {[playerName] = teamId, ...} table as first arg
+        if type(args[1]) == "table" then
+            local myTeamId = args[1][LocalPlayer.Name]
+            for name, teamId in pairs(args[1]) do
+                if name ~= LocalPlayer.Name and teamId == myTeamId then
+                    teammates[name] = true
+                end
+            end
+        -- Format B: two args — player instance/name and team value
+        elseif args[1] and args[2] then
+            -- store raw for manual inspection if neither format works
+            -- print("[TeamLocal]", typeof(args[1]), tostring(args[1]), typeof(args[2]), tostring(args[2]))
+        end
+    end)
+end
+
+local function getEnemies()
+    local list = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p == LocalPlayer then continue end
+        if isTeammate(p) then continue end -- skip teammates via TeamLocal data
+        if not p.Character then continue end
+        local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+        local hum = p.Character:FindFirstChildOfClass("Humanoid")
+        if hrp and hum and hum.Health > 0 then
+            table.insert(list, p)
+        end
+    end
+    return list
+end
+
+local function getNearestEnemy()
+    local myHRP = getHRP()
+    if not myHRP then return nil end
+    local nearest, nearestDist = nil, math.huge
+    for _, p in ipairs(getEnemies()) do
+        local hrp = p.Character.HumanoidRootPart
+        local dist = (hrp.Position - myHRP.Position).Magnitude
+        if dist < nearestDist then
+            nearestDist = dist
+            nearest = p
+        end
+    end
+    return nearest, nearestDist
+end
+
+local function getMyWeapon()
+    local char = getChar()
+    if not char then return nil, nil end
+    -- Check workspace character model for weapon
+    local wsChar = workspace:FindFirstChild(LocalPlayer.Name)
+    if not wsChar then return nil, nil end
+    for _, child in ipairs(wsChar:GetChildren()) do
+        -- Guns have .fire, knives have .Slash
+        local fireEvt  = child:FindFirstChild("fire")
+        local slashEvt = child:FindFirstChild("Slash")
+        if fireEvt then return child, "Gun" end
+        if slashEvt then return child, "Knife" end
+    end
+    return nil, nil
+end
+
+-- ─── WINDOW ───────────────────────────────────────────────────────────────────
+local Window = Rayfield:CreateWindow({
+    Name = "Rivals Script",
+    Icon = 0,
+    LoadingTitle = "Rivals Script",
+    LoadingSubtitle = "Loading...",
+    ToggleUIKeybind = "K",
+    DisableRayfieldPrompts = true,
+    DisableBuildWarnings = true,
+    ConfigurationSaving = { Enabled=true, FolderName="RivalsScript", FileName="rivals" },
+    KeySystem = false,
+})
+
+-- ─── TABS ─────────────────────────────────────────────────────────────────────
+local CombatTab = Window:CreateTab("Combat",  4483362458)
+local ESPTab    = Window:CreateTab("ESP",     4483362458)
+local MiscTab   = Window:CreateTab("Misc",    4483362458)
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+--  COMBAT
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- ─── SILENT AIM (Guns) ────────────────────────────────────────────────────────
+local silentAimEnabled = false
+local silentAimFOV     = 150
+
+CombatTab:CreateSection("Gun - Silent Aim")
+
+CombatTab:CreateToggle({
+    Name = "Silent Aim",
+    CurrentValue = false,
+    Callback = function(v)
+        silentAimEnabled = v
+        Notify("Silent Aim", v and "Enabled" or "Disabled", 3)
+    end,
+})
+
+CombatTab:CreateSlider({
+    Name = "FOV Radius",
+    Range = {10, 1000},
+    Increment = 10,
+    CurrentValue = 150,
+    Callback = function(v) silentAimFOV = v end,
+})
+
+-- Draw FOV circle
+local fovCircle = Drawing.new("Circle")
+fovCircle.Visible    = false
+fovCircle.Radius     = silentAimFOV
+fovCircle.Color      = Color3.fromRGB(255, 255, 255)
+fovCircle.Thickness  = 1
+fovCircle.Filled     = false
+fovCircle.Transparency = 1
+
+CombatTab:CreateToggle({
+    Name = "Show FOV Circle",
+    CurrentValue = false,
+    Callback = function(v) fovCircle.Visible = v end,
+})
+
+local Mouse = LocalPlayer:GetMouse()
+
+RunService.RenderStepped:Connect(function()
+    fovCircle.Position = Vector2.new(Mouse.X, Mouse.Y)
+    fovCircle.Radius   = silentAimFOV
+end)
+
+-- Hook the gun fire remote for silent aim
+local function getTargetInFOV()
+    local cam = workspace.CurrentCamera
+    local center = Vector2.new(Mouse.X, Mouse.Y)
+    local best, bestDist = nil, silentAimFOV
+    for _, p in ipairs(getEnemies()) do
+        local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        local screenPos, inViewport = cam:WorldToViewportPoint(hrp.Position)
+        if not inViewport then continue end
+        local dist2D = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+        if dist2D < bestDist then
+            bestDist = dist2D
+            best = p
+        end
+    end
+    return best
+end
+
+-- Global hook: intercepts fire:FireServer(Vector3) and replaces the aim position
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    if method == "FireServer" and self.Name == "fire" and silentAimEnabled then
+        local wsChar = workspace:FindFirstChild(LocalPlayer.Name)
+        if wsChar and self:IsDescendantOf(wsChar) then
+            local target = getTargetInFOV()
+            if target and target.Character then
+                local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    -- fire takes exactly one Vector3 — replace it entirely
+                    return oldNamecall(self, hrp.Position)
+                end
+            end
+        end
+    end
+    return oldNamecall(self, ...)
+end)
+
+-- ─── HITBOX EXPANSION ────────────────────────────────────────────────────────
+local hitboxEnabled  = false
+local hitboxSize     = 8
+local hitboxOriginal = {} -- { [player.Name] = originalSize }
+
+local function applyHitboxes()
+    for _, p in ipairs(getEnemies()) do
+        local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            if not hitboxOriginal[p.Name] then
+                hitboxOriginal[p.Name] = hrp.Size
+            end
+            pcall(function() hrp.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize) end)
+        end
+    end
+end
+
+local function restoreHitboxes()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and hitboxOriginal[p.Name] then
+                hrp.Size = hitboxOriginal[p.Name]
+            end
+        end
+    end
+    hitboxOriginal = {}
+end
+
+CombatTab:CreateSection("Hitbox")
+
+CombatTab:CreateToggle({
+    Name = "Hitbox Expansion [H]",
+    CurrentValue = false,
+    Callback = function(v)
+        hitboxEnabled = v
+        if not v then restoreHitboxes() end
+        Notify("Hitbox", v and ("Expanded to " .. hitboxSize .. " studs") or "Restored", 3)
+    end,
+})
+
+CombatTab:CreateSlider({
+    Name = "Hitbox Size",
+    Range = {2, 50},
+    Increment = 1,
+    CurrentValue = 8,
+    Callback = function(v) hitboxSize = v end,
+})
+
+-- Apply hitboxes every frame when enabled
+RunService.Heartbeat:Connect(function()
+    if hitboxEnabled then applyHitboxes() end
+end)
+
+-- Clean up when players leave
+Players.PlayerRemoving:Connect(function(p)
+    hitboxOriginal[p.Name] = nil
+end)
+
+-- ─── KEYBINDS ─────────────────────────────────────────────────────────────────
+-- B = toggle silent aim, H = toggle hitbox, N = cycle blatant aim target
+
+-- Declare here so cycleTarget() and the blatant aim block share the same upvalue
+local blatantAimEnabled = false
+local blatantAimTarget  = nil
+
+local targetList  = {}
+local targetIndex = 1
+
+local function refreshTargetList()
+    targetList = getEnemies()
+    targetIndex = 1
+end
+
+local function cycleTarget()
+    refreshTargetList()
+    if #targetList == 0 then
+        Notify("Target", "No enemies found.", 3)
+        return
+    end
+    targetIndex = (targetIndex % #targetList) + 1
+    blatantAimTarget = targetList[targetIndex]
+    Notify("Target", "Locked: " .. blatantAimTarget.Name .. " (" .. targetIndex .. "/" .. #targetList .. ")", 3)
+end
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.B then
+        silentAimEnabled = not silentAimEnabled
+        Notify("Silent Aim", silentAimEnabled and "ON [B]" or "OFF [B]", 2)
+    elseif input.KeyCode == Enum.KeyCode.H then
+        hitboxEnabled = not hitboxEnabled
+        if not hitboxEnabled then restoreHitboxes() end
+        Notify("Hitbox", hitboxEnabled and "ON [H]" or "OFF [H]", 2)
+    elseif input.KeyCode == Enum.KeyCode.N then
+        cycleTarget()
+    end
+end)
+
+-- ─── BLATANT AIM ─────────────────────────────────────────────────────────────
+CombatTab:CreateSection("Gun - Blatant Aim")
+
+CombatTab:CreateToggle({
+    Name = "Blatant Aim (Camera Lock)",
+    CurrentValue = false,
+    Callback = function(v)
+        blatantAimEnabled = v
+        if not v then blatantAimTarget = nil end
+        Notify("Blatant Aim", v and "Enabled — camera locks to nearest enemy" or "Disabled", 3)
+    end,
+})
+
+CombatTab:CreateButton({
+    Name = "Lock Target (nearest in FOV)",
+    Callback = function()
+        blatantAimTarget = getTargetInFOV() or getNearestEnemy()
+        if blatantAimTarget then
+            Notify("Blatant Aim", "Locked onto " .. blatantAimTarget.Name, 3)
+        else
+            Notify("Blatant Aim", "No target found.", 3)
+        end
+    end,
+})
+
+CombatTab:CreateButton({
+    Name = "Cycle Target [N]",
+    Callback = function() cycleTarget() end,
+})
+
+CombatTab:CreateButton({
+    Name = "Clear Lock",
+    Callback = function()
+        blatantAimTarget = nil
+        Notify("Blatant Aim", "Lock cleared.", 3)
+    end,
+})
+
+RunService.RenderStepped:Connect(function()
+    if not blatantAimEnabled then return end
+    -- If locked target dies or leaves, fall back to nearest
+    local target = blatantAimTarget
+    if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then
+        target = getNearestEnemy()
+        blatantAimTarget = target
+    end
+    if not target then return end
+    local hrp = target.Character.HumanoidRootPart
+    local cam = workspace.CurrentCamera
+    cam.CFrame = CFrame.new(cam.CFrame.Position, hrp.Position)
+end)
+
+-- ─── AUTO SLASH (Knives) ──────────────────────────────────────────────────────
+local autoSlashEnabled = false
+local autoSlashRange   = 15
+local autoSlashDelay   = 0.1
+
+CombatTab:CreateSection("Knife - Auto Slash")
+
+CombatTab:CreateToggle({
+    Name = "Auto Slash",
+    CurrentValue = false,
+    Callback = function(v)
+        autoSlashEnabled = v
+        Notify("Auto Slash", v and "Enabled" or "Disabled", 3)
+    end,
+})
+
+CombatTab:CreateSlider({
+    Name = "Slash Range",
+    Range = {5, 100},
+    Increment = 1,
+    CurrentValue = 15,
+    Callback = function(v) autoSlashRange = v end,
+})
+
+CombatTab:CreateSlider({
+    Name = "Slash Delay (ms)",
+    Range = {50, 1000},
+    Increment = 50,
+    CurrentValue = 100,
+    Callback = function(v) autoSlashDelay = v / 1000 end,
+})
+
+task.spawn(function()
+    while true do
+        task.wait(autoSlashDelay)
+        if not autoSlashEnabled then continue end
+        local weapon, wType = getMyWeapon()
+        if weapon and wType == "Knife" then
+            local slashEvt = weapon:FindFirstChild("Slash")
+            local nearest, dist = getNearestEnemy()
+            if slashEvt and nearest and dist <= autoSlashRange then
+                pcall(function()
+                    slashEvt:FireServer()
+                end)
+            end
+        end
+    end
+end)
+
+-- ─── REACH / TELEPORT ─────────────────────────────────────────────────────────
+local reachEnabled   = false
+local teleportSlash  = false
+
+CombatTab:CreateSection("Knife - Reach / TP Slash")
+
+CombatTab:CreateToggle({
+    Name = "Teleport Slash",
+    CurrentValue = false,
+    Callback = function(v)
+        teleportSlash = v
+        Notify("Teleport Slash", v and "Enabled — press Z to slash" or "Disabled", 4)
+    end,
+})
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe or not teleportSlash then return end
+    if input.KeyCode == Enum.KeyCode.Z then
+        local myHRP = getHRP()
+        if not myHRP then return end
+        local nearest = getNearestEnemy()
+        if not nearest then return end
+        local targetHRP = nearest.Character.HumanoidRootPart
+        local weapon, wType = getMyWeapon()
+        -- TP to target, slash, TP back
+        local origin = myHRP.CFrame
+        myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 2.5)
+        if weapon and wType == "Knife" then
+            local slashEvt = weapon:FindFirstChild("Slash")
+            if slashEvt then
+                pcall(function() slashEvt:FireServer() end)
+            end
+        end
+        task.wait(0.1)
+        myHRP.CFrame = origin
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+--  ESP
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+local espEnabled      = false
+local espBoxes        = {}
+local espNames        = {}
+local espHealthBars   = {}
+local espTracers      = {}
+local espShowBoxes    = true
+local espShowNames    = true
+local espShowHealth   = true
+local espShowTracers  = false
+local espTeamColor    = false
+
+local function newDrawing(type, props)
+    local d = Drawing.new(type)
+    for k, v in pairs(props) do d[k] = v end
+    return d
+end
+
+local function removeESPForPlayer(p)
+    local name = p.Name
+    if espBoxes[name]      then espBoxes[name]:Remove()      espBoxes[name]=nil      end
+    if espNames[name]      then espNames[name]:Remove()      espNames[name]=nil      end
+    if espHealthBars[name] then espHealthBars[name]:Remove() espHealthBars[name]=nil end
+    if espTracers[name]    then espTracers[name]:Remove()    espTracers[name]=nil    end
+end
+
+Players.PlayerRemoving:Connect(removeESPForPlayer)
+
+ESPTab:CreateSection("ESP Settings")
+
+ESPTab:CreateToggle({
+    Name = "ESP Enabled",
+    CurrentValue = false,
+    Callback = function(v)
+        espEnabled = v
+        if not v then
+            for _, p in ipairs(Players:GetPlayers()) do
+                removeESPForPlayer(p)
+            end
+        end
+        Notify("ESP", v and "Enabled" or "Disabled", 3)
+    end,
+})
+
+ESPTab:CreateToggle({ Name="Show Boxes",    CurrentValue=true,  Callback=function(v) espShowBoxes=v    end })
+ESPTab:CreateToggle({ Name="Show Names",    CurrentValue=true,  Callback=function(v) espShowNames=v    end })
+ESPTab:CreateToggle({ Name="Show Health",   CurrentValue=true,  Callback=function(v) espShowHealth=v   end })
+ESPTab:CreateToggle({ Name="Show Tracers",  CurrentValue=false, Callback=function(v) espShowTracers=v  end })
+
+RunService.RenderStepped:Connect(function()
+    if not espEnabled then return end
+    local cam = workspace.CurrentCamera
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p == LocalPlayer then continue end
+        local char = p.Character
+        local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+
+        if not hrp or not hum then
+            removeESPForPlayer(p)
+            continue
+        end
+
+        local name = p.Name
+        local topPos, topVis    = cam:WorldToViewportPoint(hrp.Position + Vector3.new(0, 3, 0))
+        local botPos, botVis    = cam:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+        local visible = topVis or botVis
+        local color = Color3.fromRGB(255, 60, 60)
+
+        if visible then
+            local boxH = math.abs(topPos.Y - botPos.Y)
+            local boxW = boxH * 0.55
+            local cx   = topPos.X
+
+            -- Box
+            if espShowBoxes then
+                if not espBoxes[name] then
+                    espBoxes[name] = newDrawing("Square", {
+                        Visible=true, Color=color, Thickness=1.5,
+                        Filled=false, Transparency=1
+                    })
+                end
+                local b = espBoxes[name]
+                b.Visible  = true
+                b.Color    = color
+                b.Size     = Vector2.new(boxW, boxH)
+                b.Position = Vector2.new(cx - boxW/2, topPos.Y)
+            elseif espBoxes[name] then espBoxes[name].Visible=false end
+
+            -- Name
+            if espShowNames then
+                if not espNames[name] then
+                    espNames[name] = newDrawing("Text", {
+                        Visible=true, Color=Color3.new(1,1,1), Size=14,
+                        Center=true, Outline=true, Font=2
+                    })
+                end
+                local n = espNames[name]
+                n.Visible  = true
+                n.Text     = p.Name .. " [" .. math.floor(hum.Health) .. "]"
+                n.Position = Vector2.new(cx, topPos.Y - 18)
+            elseif espNames[name] then espNames[name].Visible=false end
+
+            -- Health bar
+            if espShowHealth then
+                if not espHealthBars[name] then
+                    espHealthBars[name] = newDrawing("Square", {
+                        Visible=true, Filled=true, Transparency=1, Thickness=1
+                    })
+                end
+                local hb = espHealthBars[name]
+                local hpRatio = hum.Health / hum.MaxHealth
+                hb.Visible  = true
+                hb.Color    = Color3.fromRGB(math.floor(255*(1-hpRatio)), math.floor(255*hpRatio), 0)
+                hb.Size     = Vector2.new(4, boxH * hpRatio)
+                hb.Position = Vector2.new(cx - boxW/2 - 7, topPos.Y + boxH*(1-hpRatio))
+            elseif espHealthBars[name] then espHealthBars[name].Visible=false end
+
+            -- Tracer
+            if espShowTracers then
+                if not espTracers[name] then
+                    espTracers[name] = newDrawing("Line", {
+                        Visible=true, Color=color, Thickness=1, Transparency=1
+                    })
+                end
+                local t = espTracers[name]
+                t.Visible = true
+                t.Color   = color
+                t.From    = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y)
+                t.To      = Vector2.new(cx, botPos.Y)
+            elseif espTracers[name] then espTracers[name].Visible=false end
+        else
+            -- Off screen, hide
+            if espBoxes[name]      then espBoxes[name].Visible=false      end
+            if espNames[name]      then espNames[name].Visible=false       end
+            if espHealthBars[name] then espHealthBars[name].Visible=false  end
+            if espTracers[name]    then espTracers[name].Visible=false     end
+        end
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+--  MISC
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- ─── FREE ITEM ────────────────────────────────────────────────────────────────
+MiscTab:CreateSection("Free Items")
+
+MiscTab:CreateButton({
+    Name = "Claim Free Item",
+    Callback = function()
+        local ok, result = pcall(function()
+            return RS:WaitForChild("RequestClaimFreeItem"):InvokeServer()
+        end)
+        if ok then
+            Notify("Free Item", "Claimed! Result: " .. tostring(result), 5)
+        else
+            Notify("Free Item", "Failed: " .. tostring(result), 4)
+        end
+    end,
+})
+
+-- ─── CODES ────────────────────────────────────────────────────────────────────
+MiscTab:CreateSection("Codes")
+
+local knownCodes = {
+    "RIVALS", "RELEASE", "UPDATE", "SKIN", "FREE",
+    "LAUNCH", "RIVALS2", "HOLIDAY", "EVENT"
+}
+
+MiscTab:CreateButton({
+    Name = "Auto Redeem All Known Codes",
+    Callback = function()
+        local redeemed = 0
+        for _, code in ipairs(knownCodes) do
+            local ok, result = pcall(function()
+                return RS:WaitForChild("Code"):InvokeServer(code)
+            end)
+            if ok and result then
+                redeemed = redeemed + 1
+                Notify("Code", "✓ " .. code, 2)
+            end
+            task.wait(0.5)
+        end
+        Notify("Codes", "Done. " .. redeemed .. " redeemed.", 4)
+    end,
+})
+
+MiscTab:CreateInput({
+    Name = "Redeem Custom Code",
+    PlaceholderText = "Enter code...",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(code)
+        if code == "" then return end
+        local ok, result = pcall(function()
+            return RS:WaitForChild("Code"):InvokeServer(code)
+        end)
+        Notify("Code", ok and ("Result: " .. tostring(result)) or "Failed.", 4)
+    end,
+})
+
+-- ─── PLAYER DATA ──────────────────────────────────────────────────────────────
+MiscTab:CreateSection("Player Data")
+
+MiscTab:CreateButton({
+    Name = "Print My Player Data",
+    Callback = function()
+        local ok, data = pcall(function()
+            return RS:WaitForChild("GetPlayerData"):InvokeServer()
+        end)
+        if ok and data then
+            if type(data) == "table" then
+                for k, v in pairs(data) do
+                    print(tostring(k) .. " = " .. tostring(v))
+                end
+                Notify("Player Data", "Printed to console. Check F9.", 4)
+            else
+                print(tostring(data))
+                Notify("Player Data", tostring(data), 4)
+            end
+        else
+            Notify("Player Data", "Failed: " .. tostring(data), 4)
+        end
+    end,
+})
+
+-- ─── SPEED / MOVEMENT ─────────────────────────────────────────────────────────
+MiscTab:CreateSection("Movement")
+
+MiscTab:CreateSlider({
+    Name = "Walk Speed",
+    Range = {16, 300},
+    Increment = 1,
+    CurrentValue = 16,
+    Callback = function(v)
+        local hum = getHum()
+        if hum then hum.WalkSpeed = v end
+    end,
+})
+
+MiscTab:CreateSlider({
+    Name = "Jump Power",
+    Range = {50, 500},
+    Increment = 5,
+    CurrentValue = 50,
+    Callback = function(v)
+        local hum = getHum()
+        if hum then hum.JumpPower = v end
+    end,
+})
+
+MiscTab:CreateToggle({
+    Name = "Infinite Jump",
+    CurrentValue = false,
+    Callback = function(v)
+        if v then
+            UserInputService.JumpRequest:Connect(function()
+                local hum = getHum()
+                if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+            end)
+        end
+        Notify("Infinite Jump", v and "Enabled" or "Disabled (rejoin to remove)", 3)
+    end,
+})
+
+-- ─── KILL AURA ────────────────────────────────────────────────────────────────
+MiscTab:CreateSection("Kill Aura")
+
+local killAuraEnabled = false
+local killAuraRange   = 10
+
+MiscTab:CreateToggle({
+    Name = "Kill Aura",
+    CurrentValue = false,
+    Callback = function(v)
+        killAuraEnabled = v
+        Notify("Kill Aura", v and "Enabled" or "Disabled", 3)
+    end,
+})
+
+MiscTab:CreateSlider({
+    Name = "Kill Aura Range",
+    Range = {5, 100},
+    Increment = 1,
+    CurrentValue = 10,
+    Callback = function(v) killAuraRange = v end,
+})
+
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if not killAuraEnabled then continue end
+        local weapon, wType = getMyWeapon()
+        if not weapon then continue end
+        local myHRP = getHRP()
+        if not myHRP then continue end
+
+        for _, p in ipairs(getEnemies()) do
+            local char = p.Character
+            local enemyHRP = char and char:FindFirstChild("HumanoidRootPart")
+            if not enemyHRP then continue end
+            local dist = (enemyHRP.Position - myHRP.Position).Magnitude
+            if dist > killAuraRange then continue end
+
+            -- Client-side bring: move enemy to us, slash, restore
+            local savedCFrame = enemyHRP.CFrame
+            pcall(function()
+                enemyHRP.CFrame = myHRP.CFrame * CFrame.new(0, 0, 2)
+            end)
+
+            if wType == "Knife" then
+                local slash = weapon:FindFirstChild("Slash")
+                if slash then pcall(function() slash:FireServer() end) end
+            elseif wType == "Gun" then
+                local fire = weapon:FindFirstChild("fire")
+                if fire then pcall(function() fire:FireServer(myHRP.Position) end) end
+            end
+
+            task.wait(0.05)
+            pcall(function() enemyHRP.CFrame = savedCFrame end)
+        end
+    end
+end)
+
+-- ─── READY ────────────────────────────────────────────────────────────────────
+Notify("Rivals Script", "Loaded! Press K to toggle UI.", 5)
