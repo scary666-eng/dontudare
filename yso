@@ -797,6 +797,50 @@ MiscTab:CreateButton({ Name="Get Gas (93)", Callback=function()
 	game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("FuelSystem"):WaitForChild("RefuelVehicle"):FireServer(unpack(args))
 end })
 
+MiscTab:CreateSection("Vehicle Jump")
+
+local vehicleJumpEnabled = false
+local jumpForce = 150
+
+MiscTab:CreateToggle({
+	Name = "Vehicle Jump (J Key)",
+	CurrentValue = false,
+	Callback = function(v)
+		vehicleJumpEnabled = v
+		if v then
+			Notify("Vehicle Jump", "Vehicle Jump is enabled, use [J] to jump.", 5)
+		else
+			Notify("Vehicle Jump", "Disabled.", 3)
+		end
+	end,
+})
+
+MiscTab:CreateSlider({
+	Name = "Jump Force",
+	Range = {10, 100},
+	Increment = 5,
+	CurrentValue = 10,
+	Callback = function(v) jumpForce = v end,
+})
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+	if gpe or not vehicleJumpEnabled then return end
+	if input.KeyCode == Enum.KeyCode.J then
+		local seat = getSeatPart and getSeatPart()
+		if not seat then
+			local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+			seat = hum and hum.SeatPart
+		end
+		if seat then
+			seat.AssemblyLinearVelocity = Vector3.new(
+				seat.AssemblyLinearVelocity.X,
+				jumpForce,
+				seat.AssemblyLinearVelocity.Z
+			)
+		end
+	end
+end)
+
 MiscTab:CreateSection("Utilities")
 MiscTab:CreateButton({ Name="Re-Apply All",   Callback=function() ApplyAll() Notify("Vehicle Modifier","All settings re-applied!",3) end })
 MiscTab:CreateButton({ Name="Reload From Car",Callback=function() LoadFromCar() Notify("Vehicle Modifier","Reloaded from car!",3) end })
