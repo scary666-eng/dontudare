@@ -478,7 +478,7 @@ local function RunATMPass(loop)
     ATMRunning=false
 end
 
-ATMTab:CreateSection("ATM Farm")
+ATMTab:CreateSection("ATM Farm BUGGY")
 ATMTab:CreateToggle({ Name="Auto Farm ATMs (Loop)", CurrentValue=false, Flag="ATMLoop", Callback=function(state)
     if state then
         if ATMRunning then return end
