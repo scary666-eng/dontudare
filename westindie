@@ -1,0 +1,618 @@
+-- A-Chassis Modifier
+-- Works for any user, any vehicle
+
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/scary666-eng/dontudare/refs/heads/main/udray"))()
+
+local Players          = game:GetService("Players")
+local RunService       = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer      = Players.LocalPlayer
+
+-- ══════════════════════════════════════════
+--  TUNE LOADER (same approach as reference)
+-- ══════════════════════════════════════════
+
+local Tune = nil
+
+local function findTuneInModel(model)
+    for _, v in ipairs(model:GetDescendants()) do
+        if v:IsA("ModuleScript") and (v.Name == "A-Chassis Tune" or v.Name == "Tune") then
+            return v
+        end
+    end
+    return nil
+end
+
+local function tryLoadFromSeat(seat)
+    local current = seat.Parent
+    while current and current ~= workspace do
+        if current:IsA("Model") then
+            local mod = findTuneInModel(current)
+            if mod then
+                local ok, result = pcall(require, mod)
+                if ok and type(result) == "table" then
+                    Tune = result
+                    return true
+                end
+            end
+        end
+        current = current.Parent
+    end
+    return false
+end
+
+local function tryLoad()
+    local char = LocalPlayer.Character
+    if not char then return false end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum or not hum.SeatPart then return false end
+    return tryLoadFromSeat(hum.SeatPart)
+end
+
+local function hookHumanoid(char)
+    local hum = char:WaitForChild("Humanoid")
+    hum:GetPropertyChangedSignal("SeatPart"):Connect(function()
+        if hum.SeatPart and not Tune then
+            if tryLoadFromSeat(hum.SeatPart) then
+                Rayfield:Notify({
+                    Title = "A-Chassis Modifier",
+                    Content = "Vehicle detected! Tune loaded.",
+                    Duration = 3,
+                    Image = 4483362458,
+                })
+            end
+        end
+    end)
+end
+
+if not tryLoad() then
+    Rayfield:Notify({
+        Title = "A-Chassis Modifier",
+        Content = "Sit in an A-Chassis vehicle to load the tuner.",
+        Duration = 5,
+        Image = 4483362458,
+    })
+    if LocalPlayer.Character then hookHumanoid(LocalPlayer.Character) end
+    LocalPlayer.CharacterAdded:Connect(hookHumanoid)
+end
+
+-- ══════════════════════════════════════════
+--  VEHICLE HELPERS
+-- ══════════════════════════════════════════
+
+local function getSeatPart()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return nil end
+    local seat = hum.SeatPart
+    if seat and seat:IsA("VehicleSeat") then return seat end
+    return nil
+end
+
+local function getVehicleModel()
+    local seat = getSeatPart()
+    if not seat then return nil end
+    local current = seat.Parent
+    while current and current ~= workspace do
+        if current:IsA("Model") then return current end
+        current = current.Parent
+    end
+    return nil
+end
+
+local function isOnPoliceTeam()
+    local team = LocalPlayer.Team
+    return team and (team.Name == "Police" or team.Name == "police")
+end
+
+local function setValue(key, value)
+    if not Tune then
+        Rayfield:Notify({
+            Title = "No Tune Loaded",
+            Content = "Sit in an A-Chassis vehicle first.",
+            Duration = 4,
+            Image = 4483362458,
+        })
+        return
+    end
+    Tune[key] = value
+    Rayfield:Notify({
+        Title = "Applied",
+        Content = key .. " -> " .. tostring(value),
+        Duration = 2,
+        Image = 4483362458,
+    })
+end
+
+-- ══════════════════════════════════════════
+--  SUSPENSION (direct SpringConstraint apply)
+-- ══════════════════════════════════════════
+
+local SuspData = {
+    FSusStiffness = 15000, FSusDamping = 1100,
+    FSusLength = 2.1,      FPreCompress = 0.3,
+    FExtensionLim = 0.22,  FCompressLim = 0.20,
+    RSusStiffness = 15000, RSusDamping = 1200,
+    RSusLength = 2.1,      RPreCompress = 0.3,
+    RExtensionLim = 0.23,  RCompressLim = 0.21,
+}
+
+local function applySusp(key, value)
+    SuspData[key] = value
+    local model = getVehicleModel()
+    if not model then
+        Rayfield:Notify({ Title="No Vehicle", Content="Sit in a vehicle first.", Duration=3, Image=4483362458 })
+        return
+    end
+    if Tune then Tune[key] = value end
+
+    local applied = 0
+    for _, obj in ipairs(model:GetDescendants()) do
+        if obj:IsA("SpringConstraint") then
+            -- Determine which axle this spring is on by walking up its parent chain
+            local isFront, isRear = false, false
+            local p = obj
+            for _ = 1, 6 do
+                if p then
+                    local n = p.Name:upper()
+                    if n:sub(1,1) == "F" or n:find("FRONT") or n == "FL" or n == "FR" then isFront = true end
+                    if n:sub(1,1) == "R" or n:find("REAR")  or n == "RL" or n == "RR" then isRear  = true end
+                    p = p.Parent
+                end
+            end
+
+            pcall(function()
+                if key == "FSusStiffness" and isFront then obj.Stiffness = value applied = applied + 1
+                elseif key == "RSusStiffness" and isRear  then obj.Stiffness = value applied = applied + 1
+                elseif key == "FSusDamping"   and isFront then obj.Damping   = value applied = applied + 1
+                elseif key == "RSusDamping"   and isRear  then obj.Damping   = value applied = applied + 1
+                elseif (key == "FSusLength" or key == "FPreCompress") and isFront then
+                    local fl = SuspData.FSusLength + SuspData.FPreCompress
+                    obj.FreeLength = fl
+                    obj.MaxLength  = fl + SuspData.FCompressLim
+                    obj.MinLength  = math.max(0, fl - SuspData.FExtensionLim)
+                    applied = applied + 1
+                elseif (key == "RSusLength" or key == "RPreCompress") and isRear then
+                    local rl = SuspData.RSusLength + SuspData.RPreCompress
+                    obj.FreeLength = rl
+                    obj.MaxLength  = rl + SuspData.RCompressLim
+                    obj.MinLength  = math.max(0, rl - SuspData.RExtensionLim)
+                    applied = applied + 1
+                end
+            end)
+        end
+    end
+
+    if applied > 0 then
+        Rayfield:Notify({ Title="Suspension", Content=key.." -> "..tostring(value).." ("..applied.." springs)", Duration=2, Image=4483362458 })
+    else
+        -- No springs found by axle name — apply stiffness/damping to ALL springs as fallback
+        for _, obj in ipairs(model:GetDescendants()) do
+            if obj:IsA("SpringConstraint") then
+                pcall(function()
+                    if key:find("Stiffness") then obj.Stiffness = value
+                    elseif key:find("Damping") then obj.Damping = value
+                    elseif key:find("Length") or key:find("Compress") then
+                        local l = SuspData.FSusLength + SuspData.FPreCompress
+                        obj.FreeLength = l
+                        obj.MaxLength  = l + SuspData.FCompressLim
+                        obj.MinLength  = math.max(0, l - SuspData.FExtensionLim)
+                    end
+                end)
+                applied = applied + 1
+            end
+        end
+        if applied > 0 then
+            Rayfield:Notify({ Title="Suspension (all)", Content=key.." -> "..tostring(value), Duration=2, Image=4483362458 })
+        else
+            Rayfield:Notify({ Title="Tune Only", Content=key.." set in tune (no springs found)", Duration=3, Image=4483362458 })
+        end
+    end
+end
+
+-- ══════════════════════════════════════════
+--  AFK FARM TRACK (CLIENT SIDED, IN SKY)
+-- ══════════════════════════════════════════
+
+local TRACK_LENGTH       = 1500
+local TRACK_BEHIND       = 200   -- studs of road behind spawn point
+local TRACK_Y            = 500
+local RUN_TIME           = 10
+
+local trackFolder = nil
+local trackOrigin = nil
+
+local function buildTrack(origin)
+    if trackFolder then trackFolder:Destroy() trackFolder = nil end
+
+    trackFolder = Instance.new("Folder")
+    trackFolder.Name = "AFK_Farm_Track"
+    trackFolder.Parent = workspace
+
+    local road = Instance.new("Part")
+    road.Anchored = true road.CanCollide = true
+    local totalLength = TRACK_LENGTH + TRACK_BEHIND
+    road.Size = Vector3.new(14, 1, totalLength)
+    road.CFrame = origin * CFrame.new(0, -1.5, -(TRACK_LENGTH / 2) + (TRACK_BEHIND / 2))
+    road.Material = Enum.Material.SmoothPlastic
+    road.BrickColor = BrickColor.new("Dark stone grey")
+    road.Parent = trackFolder
+
+    local sl = Instance.new("Part")
+    sl.Anchored = true sl.CanCollide = false
+    sl.Size = Vector3.new(14, 0.2, 1)
+    sl.CFrame = origin * CFrame.new(0, -0.9, TRACK_BEHIND - 2)
+    sl.Material = Enum.Material.Neon
+    sl.BrickColor = BrickColor.new("Lime green")
+    sl.Parent = trackFolder
+
+    local el = Instance.new("Part")
+    el.Anchored = true el.CanCollide = false
+    el.Size = Vector3.new(14, 0.2, 1)
+    el.CFrame = origin * CFrame.new(0, -0.9, -(TRACK_LENGTH - 2))
+    el.Material = Enum.Material.Neon
+    el.BrickColor = BrickColor.new("Bright red")
+    el.Parent = trackFolder
+
+    for _, side in ipairs({-7.5, 7.5}) do
+        local b = Instance.new("Part")
+        b.Anchored = true b.CanCollide = true
+        b.Size = Vector3.new(1, 4, totalLength)
+        b.CFrame = origin * CFrame.new(side, 0, -(TRACK_LENGTH / 2) + (TRACK_BEHIND / 2))
+        b.Material = Enum.Material.Concrete
+        b.BrickColor = BrickColor.new("White")
+        b.Parent = trackFolder
+    end
+
+    local ew = Instance.new("Part")
+    ew.Anchored = true ew.CanCollide = true
+    ew.Size = Vector3.new(14, 4, 1)
+    ew.CFrame = origin * CFrame.new(0, 0, -(TRACK_LENGTH + 1))
+    ew.BrickColor = BrickColor.new("Bright red")
+    ew.Parent = trackFolder
+
+    trackOrigin = origin
+end
+
+local function removeTrack()
+    if trackFolder then trackFolder:Destroy() trackFolder = nil end
+    trackOrigin = nil
+end
+
+local function teleportVehicleToStart()
+    local model = getVehicleModel()
+    if not model then return false end
+    local pp = model.PrimaryPart
+    if not pp then return false end
+    model:SetPrimaryPartCFrame(trackOrigin * CFrame.new(0, 4, -(TRACK_BEHIND - 10)))
+    task.wait(0.6)
+    return true
+end
+
+-- ══════════════════════════════════════════
+--  AFK FARM LOOP
+-- ══════════════════════════════════════════
+
+local farmRunning    = false
+local farmThread     = nil
+local driveConn      = nil
+local DRIVE_SPEED    = 30 * 1.467  -- 30 mph in studs/s
+
+local function startDriving()
+    -- Every heartbeat, push the vehicle forward at 30 mph via AssemblyLinearVelocity
+    driveConn = RunService.Heartbeat:Connect(function()
+        local model = getVehicleModel()
+        if not model then return end
+        local pp = model.PrimaryPart
+        if not pp then return end
+        local look = pp.CFrame.LookVector
+        local flat = Vector3.new(look.X, 0, look.Z).Unit
+        pp.AssemblyLinearVelocity = flat * DRIVE_SPEED
+    end)
+end
+
+local function stopDriving()
+    if driveConn then
+        driveConn:Disconnect()
+        driveConn = nil
+    end
+    -- Zero out velocity so car stops cleanly
+    local model = getVehicleModel()
+    if model and model.PrimaryPart then
+        model.PrimaryPart.AssemblyLinearVelocity = Vector3.zero
+    end
+end
+
+local function runFarmLoop()
+    while farmRunning do
+        if not isOnPoliceTeam() then
+            Rayfield:Notify({ Title="AFK Farm", Content="Must be on Police team!", Duration=3, Image=4483362458 })
+            task.wait(3)
+        else
+            local seat = getSeatPart()
+            if not seat then
+                Rayfield:Notify({ Title="AFK Farm", Content="Not in a vehicle. Waiting...", Duration=3, Image=4483362458 })
+                task.wait(3)
+            else
+                -- Build track first time
+                if not trackOrigin then
+                    local pos  = seat.Position
+                    local look = Vector3.new(seat.CFrame.LookVector.X, 0, seat.CFrame.LookVector.Z).Unit
+                    local skyPos = Vector3.new(pos.X, TRACK_Y, pos.Z)
+                    buildTrack(CFrame.lookAt(skyPos, skyPos + look))
+                    Rayfield:Notify({ Title="AFK Farm", Content="Track built at Y=500. Starting...", Duration=3, Image=4483362458 })
+                    task.wait(0.5)
+                end
+
+                -- Teleport to start then drive
+                if not teleportVehicleToStart() then task.wait(2) continue end
+                task.wait(0.3)
+
+                startDriving()
+                task.wait(RUN_TIME)
+                stopDriving()
+                task.wait(0.2)
+            end
+        end
+    end
+
+    stopDriving()
+    removeTrack()
+    Rayfield:Notify({ Title="AFK Farm", Content="Stopped. Track removed.", Duration=3, Image=4483362458 })
+end
+
+-- ══════════════════════════════════════════
+--  WINDOW
+-- ══════════════════════════════════════════
+
+local Window = Rayfield:CreateWindow({
+    Name = "vanta",
+    Icon = 0,
+    LoadingTitle = "West Indie Script",
+    LoadingSubtitle = "by scrilisk",
+    Theme = "Default",
+    DisableRayfieldPrompts = false,
+    DisableBuildWarnings = false,
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "AChassisMods",
+        FileName = "Config",
+    },
+    Discord = { Enabled = false },
+    KeySystem = false,
+})
+
+-- ══════════════════════════════════════════
+--  TAB: AFK FARM
+-- ══════════════════════════════════════════
+
+local FarmTab = Window:CreateTab("AFK Farm")
+
+FarmTab:CreateSection("Straight Line AFK Farm — Police Only")
+
+FarmTab:CreateParagraph({
+    Title = "How It Works",
+    Content = "Spawns a client-sided track at Y=500 (high in the sky). Drives your vehicle straight at 30 MPH for 10 seconds, resets to start, and repeats on loop until toggled off. Must be on Police team.",
+})
+
+FarmTab:CreateToggle({
+    Name = "Start AFK Farm",
+    CurrentValue = false,
+    Flag = "AFKFarm",
+    Callback = function(val)
+        if val then
+            if not isOnPoliceTeam() then
+                Rayfield:Notify({ Title="Access Denied", Content="Must be on the Police team.", Duration=4, Image=4483362458 })
+                return
+            end
+            if not getSeatPart() then
+                Rayfield:Notify({ Title="No Vehicle", Content="Sit in an A-Chassis vehicle first.", Duration=4, Image=4483362458 })
+                return
+            end
+            farmRunning = true
+            farmThread  = task.spawn(runFarmLoop)
+        else
+            farmRunning = false
+            if farmThread then task.cancel(farmThread) farmThread = nil end
+            stopDriving()
+            removeTrack()
+        end
+    end,
+})
+
+FarmTab:CreateSection("Anti-AFK")
+
+local afkRunning = false
+local afkThread  = nil
+
+FarmTab:CreateToggle({
+    Name = "Anti-AFK",
+    CurrentValue = false,
+    Flag = "AntiAFK",
+    Callback = function(val)
+        if val then
+            afkRunning = true
+            afkThread = task.spawn(function()
+                local conn = LocalPlayer.Idled:Connect(function() end)
+                while afkRunning do
+                    local cam = workspace.CurrentCamera
+                    if cam then
+                        cam.CFrame = cam.CFrame * CFrame.Angles(0, 0.0001, 0)
+                        task.wait(0.05)
+                        cam.CFrame = cam.CFrame * CFrame.Angles(0, -0.0001, 0)
+                    end
+                    task.wait(60)
+                end
+                conn:Disconnect()
+            end)
+            Rayfield:Notify({ Title="Anti-AFK", Content="Active. No keypresses used.", Duration=3, Image=4483362458 })
+        else
+            afkRunning = false
+            if afkThread then task.cancel(afkThread) afkThread = nil end
+            Rayfield:Notify({ Title="Anti-AFK", Content="Stopped.", Duration=2, Image=4483362458 })
+        end
+    end,
+})
+
+-- ══════════════════════════════════════════
+--  TAB: ENGINE
+-- ══════════════════════════════════════════
+
+local EngineTab = Window:CreateTab("Engine")
+
+EngineTab:CreateSection("Power")
+
+EngineTab:CreateSlider({
+    Name = "Horsepower", Range = {50, 2000}, Increment = 1, Suffix = "HP", CurrentValue = 315, Flag = "Horsepower",
+    Callback = function(val) setValue("Horsepower", val) end,
+})
+EngineTab:CreateSlider({
+    Name = "Peak RPM", Range = {3000, 12000}, Increment = 50, Suffix = "RPM", CurrentValue = 6000, Flag = "PeakRPM",
+    Callback = function(val) setValue("PeakRPM", val) end,
+})
+EngineTab:CreateSlider({
+    Name = "Redline", Range = {3000, 15000}, Increment = 50, Suffix = "RPM", CurrentValue = 6400, Flag = "Redline",
+    Callback = function(val) setValue("Redline", val) end,
+})
+EngineTab:CreateSlider({
+    Name = "Idle RPM", Range = {400, 2000}, Increment = 50, Suffix = "RPM", CurrentValue = 950, Flag = "IdleRPM",
+    Callback = function(val) setValue("IdleRPM", val) end,
+})
+EngineTab:CreateSlider({
+    Name = "Flywheel", Range = {50, 2000}, Increment = 10, CurrentValue = 600, Flag = "Flywheel",
+    Callback = function(val) setValue("Flywheel", val) end,
+})
+
+EngineTab:CreateSection("Transmission")
+
+EngineTab:CreateSlider({
+    Name = "Final Drive Ratio", Range = {1, 10}, Increment = 0.01, CurrentValue = 3.133, Flag = "FinalDrive",
+    Callback = function(val) setValue("FinalDrive", val) end,
+})
+EngineTab:CreateSlider({
+    Name = "Shift Up Time (s)", Range = {0.01, 1}, Increment = 0.01, Suffix = "s", CurrentValue = 0.08, Flag = "ShiftUpTime",
+    Callback = function(val) setValue("ShiftUpTime", val) end,
+})
+EngineTab:CreateSlider({
+    Name = "Shift Down Time (s)", Range = {0.01, 1}, Increment = 0.01, Suffix = "s", CurrentValue = 0.175, Flag = "ShiftDnTime",
+    Callback = function(val) setValue("ShiftDnTime", val) end,
+})
+EngineTab:CreateDropdown({
+    Name = "Drive Config", Options = {"FWD", "RWD", "AWD"}, CurrentOption = {"RWD"}, Flag = "Config",
+    Callback = function(opt) setValue("Config", type(opt) == "table" and opt[1] or opt) end,
+})
+
+-- ══════════════════════════════════════════
+--  TAB: SUSPENSION
+-- ══════════════════════════════════════════
+
+local SusTab = Window:CreateTab("Suspension")
+
+SusTab:CreateSection("Front Suspension")
+SusTab:CreateSlider({ Name="F Stiffness",    Range={1000,50000}, Increment=100,  CurrentValue=15000, Flag="FSusStiffness", Callback=function(v) applySusp("FSusStiffness",v) end })
+SusTab:CreateSlider({ Name="F Damping",      Range={100,5000},   Increment=50,   CurrentValue=1100,  Flag="FSusDamping",   Callback=function(v) setValue("FSusDamping",v)   end })
+SusTab:CreateSlider({ Name="F Length",       Range={0.5,6},      Increment=0.05, CurrentValue=2.1,   Flag="FSusLength",    Callback=function(v) setValue("FSusLength",v)    end })
+SusTab:CreateSlider({ Name="F Pre-Compress", Range={0,2},        Increment=0.05, CurrentValue=0.3,   Flag="FPreCompress",  Callback=function(v) setValue("FPreCompress",v)  end })
+
+SusTab:CreateSection("Rear Suspension")
+SusTab:CreateSlider({ Name="R Stiffness",    Range={1000,50000}, Increment=100,  CurrentValue=15000, Flag="RSusStiffness", Callback=function(v) applySusp("RSusStiffness",v) end })
+SusTab:CreateSlider({ Name="R Damping",      Range={100,5000},   Increment=50,   CurrentValue=1200,  Flag="RSusDamping",   Callback=function(v) setValue("RSusDamping",v)   end })
+SusTab:CreateSlider({ Name="R Length",       Range={0.5,6},      Increment=0.05, CurrentValue=2.1,   Flag="RSusLength",    Callback=function(v) setValue("RSusLength",v)    end })
+SusTab:CreateSlider({ Name="R Pre-Compress", Range={0,2},        Increment=0.05, CurrentValue=0.3,   Flag="RPreCompress",  Callback=function(v) setValue("RPreCompress",v)  end })
+
+SusTab:CreateSection("Camber & Toe")
+SusTab:CreateSlider({ Name="Front Camber", Range={-10,10}, Increment=0.1, Suffix="°", CurrentValue=0, Flag="FCamber", Callback=function(v) applySusp("FCamber",v) end })
+SusTab:CreateSlider({ Name="Rear Camber",  Range={-10,10}, Increment=0.1, Suffix="°", CurrentValue=0, Flag="RCamber", Callback=function(v) applySusp("RCamber",v) end })
+SusTab:CreateSlider({ Name="Front Toe",    Range={-10,10}, Increment=0.1, Suffix="°", CurrentValue=0, Flag="FToe",    Callback=function(v) setValue("FToe",v)    end })
+SusTab:CreateSlider({ Name="Rear Toe",     Range={-10,10}, Increment=0.1, Suffix="°", CurrentValue=0, Flag="RToe",    Callback=function(v) setValue("RToe",v)    end })
+
+-- ══════════════════════════════════════════
+--  TAB: BRAKES
+-- ══════════════════════════════════════════
+
+local BrakeTab = Window:CreateTab("Brakes")
+
+BrakeTab:CreateSection("Brake Setup")
+BrakeTab:CreateSlider({ Name="Brake Force",      Range={500,10000}, Increment=50,   CurrentValue=3500, Flag="BrakeForce",  Callback=function(v) setValue("BrakeForce",v)  end })
+BrakeTab:CreateSlider({ Name="Brake Bias (F/R)", Range={0,1},       Increment=0.01, CurrentValue=0.6,  Flag="BrakeBias",   Callback=function(v) setValue("BrakeBias",v)   end })
+BrakeTab:CreateSlider({ Name="Handbrake Force",  Range={500,10000}, Increment=50,   CurrentValue=5000, Flag="PBrakeForce", Callback=function(v) setValue("PBrakeForce",v) end })
+
+BrakeTab:CreateSection("ABS")
+BrakeTab:CreateToggle({ Name="ABS Enabled", CurrentValue=true,  Flag="ABSEnabled",  Callback=function(v) setValue("ABSEnabled",v)  end })
+BrakeTab:CreateSlider({ Name="ABS Threshold", Range={1,100}, Increment=1, CurrentValue=20, Flag="ABSThreshold", Callback=function(v) setValue("ABSThreshold",v) end })
+
+BrakeTab:CreateSection("TCS")
+BrakeTab:CreateToggle({ Name="TCS Enabled",   CurrentValue=true,  Flag="TCSEnabled",  Callback=function(v) setValue("TCSEnabled",v)  end })
+BrakeTab:CreateSlider({ Name="TCS Threshold", Range={1,100}, Increment=1, CurrentValue=20, Flag="TCSThreshold", Callback=function(v) setValue("TCSThreshold",v) end })
+BrakeTab:CreateSlider({ Name="TCS Limit",     Range={1,100}, Increment=1, CurrentValue=10, Flag="TCSLimit",     Callback=function(v) setValue("TCSLimit",v)     end })
+
+-- ══════════════════════════════════════════
+--  TAB: LAUNCH / LIMITS
+-- ══════════════════════════════════════════
+
+local LaunchTab = Window:CreateTab("Launch / Limits")
+
+LaunchTab:CreateSection("Launch Control")
+LaunchTab:CreateToggle({ Name="Launch Control", CurrentValue=true,  Flag="LaunchControl", Callback=function(v) setValue("LaunchControl",v) end })
+LaunchTab:CreateToggle({ Name="Launch Squat",   CurrentValue=true,  Flag="LaunchSquat",   Callback=function(v) setValue("LaunchSquat",v)   end })
+LaunchTab:CreateSlider({ Name="Launch RPM",     Range={1000,8000}, Increment=50, Suffix="RPM", CurrentValue=3200, Flag="LaunchRPM",          Callback=function(v) setValue("LaunchRPM",v)           end })
+LaunchTab:CreateSlider({ Name="Launch Torque %",Range={10,100},   Increment=1,  Suffix="%",   CurrentValue=55,   Flag="LaunchTorquePercent", Callback=function(v) setValue("LaunchTorquePercent",v) end })
+
+LaunchTab:CreateSection("Speed Limiter")
+LaunchTab:CreateToggle({ Name="Speed Limiter",       CurrentValue=true, Flag="SpeedLimiterEnabled", Callback=function(v) setValue("SpeedLimiterEnabled",v) end })
+LaunchTab:CreateSlider({ Name="Speed Limit (MPH)", Range={10,300}, Increment=5, Suffix="mph", CurrentValue=250, Flag="SpeedLimiterMPH", Callback=function(v) setValue("SpeedLimiterMPH",v) end })
+
+-- ══════════════════════════════════════════
+--  TAB: PRESETS
+-- ══════════════════════════════════════════
+
+local PresetTab = Window:CreateTab("Presets")
+PresetTab:CreateSection("One-Click Tunes")
+
+PresetTab:CreateButton({ Name="Race Tune", Callback=function()
+    if not Tune then Rayfield:Notify({Title="No Tune",Content="Sit in vehicle first.",Duration=3,Image=4483362458}) return end
+    Tune.Horsepower=450 Tune.PeakRPM=8500 Tune.Redline=9500 Tune.FinalDrive=3.9
+    Tune.FSusStiffness=22000 Tune.RSusStiffness=24000 Tune.FSusDamping=1800 Tune.RSusDamping=2000
+    Tune.BrakeForce=5000 Tune.TCSEnabled=false Tune.ABSEnabled=true Tune.LaunchControl=true Tune.LaunchRPM=5500
+    Rayfield:Notify({Title="Race Tune Applied",Content="450HP, stiff suspension, launch on.",Duration=4,Image=4483362458})
+end })
+
+PresetTab:CreateButton({ Name="Street Tune", Callback=function()
+    if not Tune then Rayfield:Notify({Title="No Tune",Content="Sit in vehicle first.",Duration=3,Image=4483362458}) return end
+    Tune.Horsepower=200 Tune.PeakRPM=6500 Tune.Redline=7000 Tune.FinalDrive=4.2
+    Tune.FSusStiffness=14000 Tune.RSusStiffness=14000 Tune.FSusDamping=1100 Tune.RSusDamping=1100
+    Tune.BrakeForce=3000 Tune.TCSEnabled=true Tune.ABSEnabled=true Tune.LaunchControl=false
+    Rayfield:Notify({Title="Street Tune Applied",Content="Balanced daily driver.",Duration=4,Image=4483362458})
+end })
+
+PresetTab:CreateButton({ Name="Drift Tune", Callback=function()
+    if not Tune then Rayfield:Notify({Title="No Tune",Content="Sit in vehicle first.",Duration=3,Image=4483362458}) return end
+    Tune.Horsepower=550 Tune.PeakRPM=7800 Tune.Redline=8500 Tune.FinalDrive=4.8 Tune.Config="RWD"
+    Tune.FSusStiffness=18000 Tune.RSusStiffness=12000 Tune.FSusDamping=1400 Tune.RSusDamping=900
+    Tune.RCamber=-2.5 Tune.FCamber=-1 Tune.TCSEnabled=false Tune.ABSEnabled=false Tune.BrakeBias=0.45
+    Rayfield:Notify({Title="Drift Tune Applied",Content="550HP RWD, loose rear.",Duration=4,Image=4483362458})
+end })
+
+PresetTab:CreateButton({ Name="Reset to Stock", Callback=function()
+    if not Tune then Rayfield:Notify({Title="No Tune",Content="Sit in vehicle first.",Duration=3,Image=4483362458}) return end
+    Tune.Horsepower=315 Tune.PeakRPM=6000 Tune.Redline=6400 Tune.IdleRPM=950 Tune.FinalDrive=3.133
+    Tune.FSusStiffness=15000 Tune.RSusStiffness=15000 Tune.FSusDamping=1100 Tune.RSusDamping=1200
+    Tune.FSusLength=2.1 Tune.RSusLength=2.1 Tune.FCamber=0 Tune.RCamber=0 Tune.FToe=0 Tune.RToe=0
+    Tune.BrakeForce=3500 Tune.BrakeBias=0.6 Tune.PBrakeForce=5000
+    Tune.TCSEnabled=true Tune.ABSEnabled=true
+    Tune.LaunchControl=true Tune.LaunchSquat=true Tune.LaunchRPM=3200 Tune.LaunchTorquePercent=55
+    Tune.SpeedLimiterEnabled=true Tune.SpeedLimiterMPH=250 Tune.Config="RWD" Tune.Flywheel=600
+    Rayfield:Notify({Title="Stock Restored",Content="All values reset to default.",Duration=4,Image=4483362458})
+end })
+
+-- ══════════════════════════════════════════
+--  INIT
+-- ══════════════════════════════════════════
+
+Rayfield:Notify({
+    Title = "A-Chassis Modifier",
+    Content = "Loaded! Sit in a vehicle to begin tuning.",
+    Duration = 5,
+    Image = 4483362458,
+})
