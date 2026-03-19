@@ -118,7 +118,7 @@ local function sendWebhook(message, pingUser)
                 color = tonumber(16744258),
                 footer = {
                     text     = "vanta.dev (" .. os.date("%H:%M") .. ")",
-                    icon_url = "https://cdn.discordapp.com/attachments/875211210486870076/1067422518413103134/hsb222.png",
+                    icon_url = "https://media.discordapp.net/attachments/1452342924263030864/1482445825647837328/IMG_5545.png?ex=69bc40c3&is=69baef43&hm=7086aa9f20d28c312a4a0c2b1ab4dcca56ede0eb4a4611b5ba350f8b54490526&=&format=webp&quality=lossless&width=1060&height=351",
                 },
                 fields = {
                     { name = "Account", value = "||" .. LocalPlayer.Name .. "||" },
