@@ -487,10 +487,6 @@ local function teleportUpTemp()
     hrp.CFrame       = pad.CFrame * CFrame.new(0, 2, 0)
 end
 
--- ── Use item (resolved from u241 + u129 hookfunction) ────────────────────────
--- HsB uses a hookfunction (u129) that auto-clicks Option1 when dialogue text
--- contains 'eating this' or 'senses a bit of' (Rokakaka/Arrow confirmation).
--- Without that hook we must click Option1 ourselves after DialogueGui appears.
 local function useItem(itemName)
     local item = getBpItem(itemName)
     if not item then
@@ -501,51 +497,80 @@ local function useItem(itemName)
     local inChar = getCharacter():WaitForChild(itemName, 3)
     if not inChar then return false end
 
-    -- repeat :Activate() until DialogueGui appears (exact HsB u241 pattern)
     repeat
         pcall(function() inChar:Activate() end)
         task.wait()
     until PlayerGui:FindFirstChild("DialogueGui")
 
-    -- HsB u129 hookfunction auto-returns Option1 for eating dialogues.
-    -- We replicate that by clicking Option1 immediately.
-    task.wait(0.05)
-    pcall(function()
-        local gui   = PlayerGui:FindFirstChild("DialogueGui")
-        if not gui then return end
-        local frame = gui:FindFirstChild("Frame")
-        if not frame then return end
-        -- ClickContinue first if present
-        local cc = frame:FindFirstChild("ClickContinue")
-        if cc then cc.MouseButton1Click:Fire() task.wait(0.05) end
-        -- Then Option1
-        local opts = frame:FindFirstChild("Options")
-        local opt1 = opts and opts:FindFirstChild("Option1")
-        local btn  = opt1 and opt1:FindFirstChild("TextButton")
-        if btn then btn.MouseButton1Click:Fire() end
-    end)
+    local dialogueGui = PlayerGui:FindFirstChild("DialogueGui")
+    local startTime = tick()
+    
+    while dialogueGui and dialogueGui.Parent and tick() - startTime < 5 do
+        pcall(function()
+            local frame = dialogueGui:FindFirstChild("Frame")
+            if not frame then return end
+            
+            local clickContinue = frame:FindFirstChild("ClickContinue")
+            if clickContinue then
+                for _, conn in pairs(getconnections(clickContinue.MouseButton1Click)) do
+                    conn:Fire()
+                end
+            end
+            
+            local options = frame:FindFirstChild("Options")
+            if options then
+                local option1 = options:FindFirstChild("Option1")
+                if option1 then
+                    local textButton = option1:FindFirstChild("TextButton")
+                    if textButton then
+                        for _, conn in pairs(getconnections(textButton.MouseButton1Click)) do
+                            conn:Fire()
+                        end
+                    end
+                end
+            end
+        end)
+        
+        task.wait(0.1)
+        dialogueGui = PlayerGui:FindFirstChild("DialogueGui")
+    end
 
     return true
 end
 
--- click DialogueGui Option1 TextButton
 local function clickOption1()
-    pcall(function()
-        local gui   = PlayerGui:FindFirstChild("DialogueGui")
-        if not gui then return end
-        local frame = gui:FindFirstChild("Frame")
-        if not frame then return end
-        local cc    = frame:FindFirstChild("ClickContinue")
-        if cc then cc.MouseButton1Click:Fire() end
-        task.wait(0.05)
-        local opts = frame:FindFirstChild("Options")
-        local opt1 = opts and opts:FindFirstChild("Option1")
-        local btn  = opt1 and opt1:FindFirstChild("TextButton")
-        if btn then btn.MouseButton1Click:Fire() end
-    end)
+    local dialogueGui = PlayerGui:FindFirstChild("DialogueGui")
+    local startTime = tick()
+    
+    while dialogueGui and dialogueGui.Parent and tick() - startTime < 3 do
+        pcall(function()
+            local frame = dialogueGui:FindFirstChild("Frame")
+            if not frame then return end
+            
+            local cc = frame:FindFirstChild("ClickContinue")
+            if cc then
+                for _, conn in pairs(getconnections(cc.MouseButton1Click)) do
+                    conn:Fire()
+                end
+            end
+            
+            task.wait(0.05)
+            
+            local opts = frame:FindFirstChild("Options")
+            local opt1 = opts and opts:FindFirstChild("Option1")
+            local btn = opt1 and opt1:FindFirstChild("TextButton")
+            if btn then
+                for _, conn in pairs(getconnections(btn.MouseButton1Click)) do
+                    conn:Fire()
+                end
+            end
+        end)
+        
+        task.wait(0.1)
+        dialogueGui = PlayerGui:FindFirstChild("DialogueGui")
+    end
 end
 
--- ── Worthiness ────────────────────────────────────────────────────────────────
 local function learnWorthiness()
     for _, skill in ipairs({"Worthiness","Worthiness II","Worthiness III","Worthiness IV","Worthiness V"}) do
         learnSkill(skill, "Character")
@@ -616,9 +641,6 @@ local function notify(title, msg, duration)
     })
 end
 
--- ============================================================
---  ITEM FARM  (resolved from u437 / _ItemFarmTogg)
--- ============================================================
 local itemFarmEnabled    = false
 local selectedFarmItems  = {}  -- [itemName] = true
 local selectedSellItems  = {}  -- [itemName] = true
@@ -1828,7 +1850,7 @@ TabMain:CreateToggle({
 })
 
 TabMain:CreateToggle({
-    Name         = "Enable Stand Farm (BUGGY)",
+    Name         = "Enable Stand Farm",
     CurrentValue = false,
     Callback     = function(v)
         standFarmEnabled = v
@@ -3057,6 +3079,32 @@ TabMisc:CreateButton({
     end,
 })
 
+TabMisc:CreateSection("Anti-AFK")
+
+local antiAfkConn = nil
+TabMisc:CreateToggle({
+    Name         = "Anti-AFK",
+    CurrentValue = false,
+    Flag         = "AntiAFK",
+    Callback     = function(state)
+        if state then
+            local VirtualUser = game:GetService("VirtualUser")
+            antiAfkConn = game:GetService("Players").LocalPlayer.Idled:Connect(function()
+                VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+                task.wait(1)
+                VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+            end)
+            notify("Anti-AFK", "Anti-AFK enabled.")
+        else
+            if antiAfkConn then
+                antiAfkConn:Disconnect()
+                antiAfkConn = nil
+            end
+            notify("Anti-AFK", "Anti-AFK disabled.")
+        end
+    end,
+})
+
 TabMisc:CreateButton({
     Name     = "Count All Inventory",
     Callback = function()
@@ -3123,32 +3171,6 @@ TabMisc:CreateButton({
     Callback = function()
         getCharacter().Humanoid.Health = 0
         notify("Misc", "Character killed — respawning.")
-    end,
-})
-
-TabMisc:CreateSection("Anti-AFK")
-
-local antiAfkConn = nil
-TabMisc:CreateToggle({
-    Name         = "Anti-AFK",
-    CurrentValue = false,
-    Flag         = "AntiAFK",
-    Callback     = function(state)
-        if state then
-            local VirtualUser = game:GetService("VirtualUser")
-            antiAfkConn = game:GetService("Players").LocalPlayer.Idled:Connect(function()
-                VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-                task.wait(1)
-                VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-            end)
-            notify("Anti-AFK", "Anti-AFK enabled.")
-        else
-            if antiAfkConn then
-                antiAfkConn:Disconnect()
-                antiAfkConn = nil
-            end
-            notify("Anti-AFK", "Anti-AFK disabled.")
-        end
     end,
 })
 
