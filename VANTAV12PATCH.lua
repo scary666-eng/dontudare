@@ -2513,6 +2513,65 @@ TabMisc:CreateButton({
 })
 
 TabMisc:CreateButton({
+    Name     = "Jerk Off",
+    Callback = function()
+        Rayfield:Notify({
+            Title    = "you dirty perv.. -scril",
+            Content  = "Check ya inventory !",
+            Duration = 5,
+            Image    = 4483362458,
+        })
+
+        local _LocalPlayer = game.Players.LocalPlayer
+
+        local function giveTool()
+            local _Tool = Instance.new('Tool')
+            _Tool.Name = 'Jerk Off R15'
+            _Tool.RequiresHandle = false
+            _Tool.Parent = _LocalPlayer.Backpack
+
+            local u4 = nil
+
+            _Tool.Equipped:Connect(function()
+                local _Humanoid = (_LocalPlayer.Character or _LocalPlayer.CharacterAdded:Wait()):FindFirstChildOfClass('Humanoid')
+
+                if _Humanoid then
+                    local _Animation = Instance.new('Animation')
+                    _Animation.AnimationId = 'rbxassetid://698251653'
+                    u4 = _Humanoid:LoadAnimation(_Animation)
+                    u4.Looped = false
+                    u4:Play()
+                    u4.TimePosition = 0.58
+                    u4:AdjustSpeed(0.4)
+
+                    task.spawn(function()
+                        while u4 and u4.IsPlaying do
+                            if u4.TimePosition >= 0.63 then
+                                u4.TimePosition = 0.58
+                            end
+                            task.wait()
+                        end
+                    end)
+                end
+            end)
+
+            _Tool.Unequipped:Connect(function()
+                if u4 then
+                    u4:Stop()
+                    u4 = nil
+                end
+            end)
+        end
+
+        giveTool()
+        _LocalPlayer.CharacterAdded:Connect(function()
+            task.wait(0.5)
+            giveTool()
+        end)
+    end,
+})
+
+TabMisc:CreateButton({
     Name     = "Anti Vamp Burn",
     Callback = function()
         spawn(function()
