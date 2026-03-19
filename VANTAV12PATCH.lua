@@ -484,7 +484,7 @@ local function togglePilot(v)
         local waited = 0
         repeat task.wait(0.1) waited = waited + 0.1 until getStandMorph() or waited > 5
         if not getStandMorph() then
-            notify("Pilot", "Failed to summon stand!")
+            Rayfield:Notify("Pilot", "Failed to summon stand!")
             return
         end
     end
@@ -494,7 +494,7 @@ local function togglePilot(v)
     standAnimController = standMorph:FindFirstChild("AnimationController") or standMorph:FindFirstChildWhichIsA("Humanoid")
 
     if not standHRP then
-        notify("Pilot", "Stand RootPart not found!")
+        Rayfield:Notify("Pilot", "Stand RootPart not found!")
         return
     end
 
@@ -635,7 +635,7 @@ local function togglePilot(v)
         end
     end)
 
-    notify("Pilot", "Universal Stand Pilot Active!")
+    Rayfield:Notify("Pilot", "Universal Stand Pilot Active!")
 end
 
 -- resolved from u18.has_stand_skill
@@ -2510,6 +2510,23 @@ TabMisc:CreateButton({
             notify("", "Need $2,500!")
         end
     end,
+})
+
+TabMisc:CreateButton({
+    Name     = "Anti Vamp Burn",
+    Callback = function()
+        spawn(function()
+            repeat wait() until game:IsLoaded()
+            local plr = game:GetService("Players").LocalPlayer;
+            while wait() do pcall(function()
+                if plr then
+                    game:GetService("Players").LocalPlayer.PlayerStats.Race.Value = "Human"
+                end
+            end )
+            end
+        end)
+        notify("YBA Script", "Anti Vamp Burn enabled.")
+    end
 })
 
 TabMisc:CreateSection("Stats")
