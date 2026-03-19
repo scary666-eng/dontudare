@@ -3126,6 +3126,32 @@ TabMisc:CreateButton({
     end,
 })
 
+TabMisc:CreateSection("Anti-AFK")
+
+local antiAfkConn = nil
+TabMisc:CreateToggle({
+    Name         = "Anti-AFK",
+    CurrentValue = false,
+    Flag         = "AntiAFK",
+    Callback     = function(state)
+        if state then
+            local VirtualUser = game:GetService("VirtualUser")
+            antiAfkConn = game:GetService("Players").LocalPlayer.Idled:Connect(function()
+                VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+                task.wait(1)
+                VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+            end)
+            notify("Anti-AFK", "Anti-AFK enabled.")
+        else
+            if antiAfkConn then
+                antiAfkConn:Disconnect()
+                antiAfkConn = nil
+            end
+            notify("Anti-AFK", "Anti-AFK disabled.")
+        end
+    end,
+})
+
 -- ============================================================
 --  EXTENDED SETTINGS — Script information
 -- ============================================================
