@@ -94,6 +94,8 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage  = game:GetService("ReplicatedStorage")
 local HttpService        = game:GetService("HttpService")
 local Stats              = game:GetService("Stats")
+local UserInputService   = game:GetService("UserInputService")
+local PhysicsService     = game:GetService("PhysicsService")
 
 -- ── Wait for game ─────────────────────────────────────────────────────────────
 repeat task.wait() until game:IsLoaded()
@@ -412,6 +414,230 @@ local function toggleStand()
     end)
 end
 
+local pilotEnabled = false
+local pilotSpeed   = 50
+local pilotSpeedChanger = false
+local pilotConns   = {}
+local standAnimController = nil
+
+local function cleanupPilot()
+    pilotEnabled = false
+    for _, conn in pairs(pilotConns) do
+        if conn and typeof(conn) == "RBXScriptConnection" then
+            conn:Disconnect()
+        end
+    end
+    pilotConns = {}
+    standAnimController = nil
+
+    pcall(function()
+        local char = LocalPlayer.Character
+        if char then
+            if char:FindFirstChild("FocusCam") then
+                char.FocusCam:Destroy()
+            end
+            for _, v in pairs(char:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    v.CanCollide = true
+                end
+            end
+        end
+
+        local standMorph = getStandMorph()
+        if standMorph then
+            local hrp = standMorph:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                if hrp:FindFirstChild("VantaPilotBV") then hrp.VantaPilotBV:Destroy() end
+                if hrp:FindFirstChild("VantaPilotBG") then hrp.VantaPilotBG:Destroy() end
+            end
+        end
+
+        local tempStorage = ReplicatedStorage:FindFirstChild("TempStoragePilot")
+        if tempStorage then
+            for _, v in pairs(tempStorage:GetChildren()) do
+                if v.Name == "Naples' Sewers" then
+                    v.Parent = workspace.Locations
+                end
+            end
+            tempStorage:Destroy()
+        end
+        workspace.CurrentCamera.CameraSubject = LocalPlayer.Character:FindFirstChild("Humanoid")
+    end)
+end
+
+local function togglePilot(v)
+    if not v then
+        cleanupPilot()
+        return
+    end
+
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChild("Humanoid")
+    if not hrp or not hum then return end
+
+    -- Summon stand if needed
+    if not getStandMorph() then
+        summonStand()
+        local waited = 0
+        repeat task.wait(0.1) waited = waited + 0.1 until getStandMorph() or waited > 5
+        if not getStandMorph() then
+            notify("Pilot", "Failed to summon stand!")
+            return
+        end
+    end
+
+    local standMorph = getStandMorph()
+    local standHRP = standMorph:WaitForChild("HumanoidRootPart", 5)
+    standAnimController = standMorph:FindFirstChild("AnimationController") or standMorph:FindFirstChildWhichIsA("Humanoid")
+
+    if not standHRP then
+        notify("Pilot", "Stand RootPart not found!")
+        return
+    end
+
+    pilotEnabled = true
+    
+    -- Focus Camera
+    pcall(function()
+        local focusCam = char:FindFirstChild("FocusCam") or Instance.new("ObjectValue", char)
+        focusCam.Name = "FocusCam"
+        focusCam.Value = standAnimController or standHRP
+        workspace.CurrentCamera.CameraSubject = standAnimController or standHRP
+    end)
+
+    -- Disable Character Collisions
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+
+    -- Physics Control (Stable movement)
+    local bv = standHRP:FindFirstChild("VantaPilotBV") or Instance.new("BodyVelocity")
+    bv.Name = "VantaPilotBV"
+    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bv.Velocity = Vector3.zero
+    bv.Parent = standHRP
+
+    local bg = standHRP:FindFirstChild("VantaPilotBG") or Instance.new("BodyGyro")
+    bg.Name = "VantaPilotBG"
+    bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bg.CFrame = standHRP.CFrame
+    bg.Parent = standHRP
+
+    -- Detach Function
+    local function detach()
+        pcall(function()
+            for _, desc in pairs(standMorph:GetDescendants()) do
+                if desc:IsA("AlignPosition") or desc:IsA("AlignOrientation") then
+                    desc.Enabled = false
+                end
+            end
+            local standAttach = (standMorph.PrimaryPart or standHRP):FindFirstChild("StandAttach")
+            if standAttach then
+                for _, desc in pairs(standAttach:GetChildren()) do
+                    if desc:IsA("AlignPosition") or desc:IsA("AlignOrientation") then
+                        desc.Enabled = false
+                    end
+                end
+            end
+        end)
+    end
+    detach()
+
+    -- Universal Movement Loop
+    table.insert(pilotConns, RunService.Heartbeat:Connect(function()
+        if not pilotEnabled then return end
+        if not char or not char.Parent then return cleanupPilot() end
+        if not standMorph or not standMorph.Parent then return cleanupPilot() end
+
+        detach()
+
+        local cam = workspace.CurrentCamera
+        local moveDir = hum.MoveDirection
+        local targetVel = Vector3.zero
+        
+        -- ground logic
+        local rayParams = RaycastParams.new()
+        rayParams.FilterDescendantsInstances = {char, standMorph}
+        rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+        
+        local floorRay = workspace:Raycast(standHRP.Position + Vector3.new(0, 2, 0), Vector3.new(0, -100, 0), rayParams)
+        local groundY = nil
+        if floorRay then
+            groundY = floorRay.Position.Y + 3.0 -- offset 4 height stand
+        end
+
+        if moveDir.Magnitude > 0 then
+            -- move direction
+            if standAnimController and pcall(function() standAnimController:Move(moveDir, false) end) then
+                -- go on if ok
+            end
+            
+            -- phsyics 4 movement
+            local horizontalVel = moveDir * pilotSpeed
+            local verticalVel = 0
+            
+            -- if ground target move towards it vertically
+            if groundY then
+                local diff = groundY - standHRP.Position.Y
+                verticalVel = diff * 10 -- smooth snap
+            end
+            
+            targetVel = Vector3.new(horizontalVel.X, verticalVel, horizontalVel.Z)
+            bg.CFrame = CFrame.new(standHRP.Position, standHRP.Position + moveDir)
+        else
+            -- stop if no input
+            if standAnimController and pcall(function() standAnimController:Move(Vector3.zero, false) end) then end
+            
+            local verticalVel = 0
+            if groundY then
+                local diff = groundY - standHRP.Position.Y
+                verticalVel = diff * 10
+            end
+            
+            targetVel = Vector3.new(0, verticalVel, 0)
+            -- Keep orientation stable when stopped
+            bg.CFrame = CFrame.new(standHRP.Position, standHRP.Position + cam.CFrame.LookVector * Vector3.new(1, 0, 1))
+        end
+
+        bv.Velocity = targetVel
+        
+        -- Override speed if enabled
+        if pilotSpeedChanger and standAnimController then
+            pcall(function() standAnimController.WalkSpeed = pilotSpeed end)
+        end
+
+        -- Sync character position (hidden)
+        if standHRP and hrp then
+            hrp.CFrame = standHRP.CFrame - Vector3.new(0, 25, 0)
+            hrp.Velocity = Vector3.zero
+        end
+    end))
+
+    -- Range Fix (Infinite Pilot Range)
+    table.insert(pilotConns, RunService.Heartbeat:Connect(function()
+        local isPiloting = standMorph:FindFirstChild("IsPiloting")
+        if isPiloting then
+            isPiloting.Value = 999999
+        end
+    end))
+
+    -- Collision Group Fix
+    pcall(function()
+        for _, v in pairs(standMorph:GetDescendants()) do
+            if v:IsA("BasePart") then
+                PhysicsService:SetPartCollisionGroup(v, "Players")
+            end
+        end
+    end)
+
+    notify("Pilot", "Universal Stand Pilot Active!")
+end
+
 -- resolved from u18.has_stand_skill
 local function hasStandSkill(skillName)
     local node = LocalPlayer:FindFirstChild("StandSkillTree")
@@ -452,6 +678,68 @@ end
 local function disableNoclip()
     if noclipConn then noclipConn:Disconnect() noclipConn = nil end
     noclipEnabled = false
+end
+
+-- ── Fly ───────────────────────────────────────────────────────────────────────
+local flyEnabled = false
+local flySpeed   = 50
+local flyConn    = nil
+
+local function toggleFly(v)
+    flyEnabled = v
+    if flyConn then flyConn:Disconnect() flyConn = nil end
+
+    if flyEnabled then
+        flyConn = RunService.RenderStepped:Connect(function()
+            local char = LocalPlayer.Character
+            if not char then return end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local hum = char:FindFirstChild("Humanoid")
+            if not hrp or not hum then return end
+
+            local bv = hrp:FindFirstChild("VantaFlyBV")
+            if not bv then
+                bv = Instance.new("BodyVelocity")
+                bv.Name = "VantaFlyBV"
+                bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                bv.Velocity = Vector3.zero
+                bv.Parent = hrp
+            end
+
+            local bg = hrp:FindFirstChild("VantaFlyBG")
+            if not bg then
+                bg = Instance.new("BodyGyro")
+                bg.Name = "VantaFlyBG"
+                bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                bg.CFrame = hrp.CFrame
+                bg.Parent = hrp
+            end
+
+            hrp.Velocity = Vector3.zero
+            local cam = workspace.CurrentCamera
+            local moveDir = hum.MoveDirection
+            local vel = Vector3.zero
+
+            if moveDir.Magnitude > 0 then
+                vel = moveDir * flySpeed
+            end
+
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                vel = vel + Vector3.new(0, flySpeed, 0)
+            elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+                vel = vel + Vector3.new(0, -flySpeed, 0)
+            end
+
+            bv.Velocity = vel
+            bg.CFrame = cam.CFrame
+        end)
+    else
+        pcall(function()
+            local hrp = getRootPart()
+            if hrp:FindFirstChild("VantaFlyBV") then hrp.VantaFlyBV:Destroy() end
+            if hrp:FindFirstChild("VantaFlyBG") then hrp.VantaFlyBG:Destroy() end
+        end)
+    end
 end
 
 -- ── Teleport helpers ──────────────────────────────────────────────────────────
@@ -2819,6 +3107,7 @@ TabSettings:CreateButton({
 -- ============================================================
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(1)
+    cleanupPilot()
     refreshItemCounts()
     -- Re-apply walkspeed/jumppower if toggled
     if wsEnabled and wsConn then wsConn:Disconnect() wsConn = nil end
@@ -3045,6 +3334,200 @@ TabLocal:CreateButton({
     end,
 })
 
+TabLocal:CreateSection("Invisibility")
+
+TabLocal:CreateToggle({
+    Name         = "Advanced Invisibility",
+    CurrentValue = false,
+    Flag         = "AdvancedInvis",
+    Callback     = function(state)
+        local Players    = game:GetService("Players")
+        local RunService = game:GetService("RunService")
+        local lp         = Players.LocalPlayer
+
+        local function cleanup()
+            getgenv().InvisEnabled = false
+            if getgenv().InvisRenderConn then
+                pcall(function() getgenv().InvisRenderConn:Disconnect() end)
+                getgenv().InvisRenderConn = nil
+            end
+            if getgenv().InvisCharConn then
+                pcall(function() getgenv().InvisCharConn:Disconnect() end)
+                getgenv().InvisCharConn = nil
+            end
+            if getgenv().HoloModel then
+                pcall(function() getgenv().HoloModel:Destroy() end)
+                getgenv().HoloModel = nil
+            end
+            local seat = workspace:FindFirstChild("vantaInvisChair")
+            if seat then pcall(function() seat:Destroy() end) end
+            local chr = lp.Character
+            if chr then
+                for _, part in pairs(chr:GetDescendants()) do
+                    if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                        part.Transparency = 0
+                    end
+                end
+            end
+            getgenv().InvisInitialized = false
+        end
+
+        if not state then cleanup() return end
+        if getgenv().InvisInitialized then getgenv().InvisEnabled = true return end
+
+        local function setup()
+            local chr = lp.Character or lp.CharacterAdded:Wait()
+            local hrp = chr:WaitForChild("HumanoidRootPart")
+            local hum = chr:WaitForChild("Humanoid")
+
+            getgenv().InvisEnabled = true
+
+            local savedCFrame = hrp.CFrame
+
+            -- Make character transparent locally
+            for _, part in pairs(chr:GetDescendants()) do
+                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                    part.Transparency = 1
+                end
+            end
+
+            -- ── Seat method with weld verification + retry ────────────────────
+            local seatPos = Vector3.new(0, 10000, 0)
+            local torso   = chr:FindFirstChild("UpperTorso") or chr:FindFirstChild("Torso")
+
+            if torso then
+                local success = false
+                local attempts = 0
+                local maxAttempts = 5
+
+                while not success and attempts < maxAttempts do
+                    attempts += 1
+
+                    -- Destroy any previous failed seat
+                    local old = workspace:FindFirstChild("vantaInvisChair")
+                    if old then pcall(function() old:Destroy() end) end
+
+                    -- Teleport character to safe sky position
+                    pcall(function() chr:MoveTo(seatPos) end)
+                    task.wait(0.06)
+
+                    -- Bail if we fell into the void
+                    if hrp.Position.Y < -50 then
+                        pcall(function() hrp.CFrame = savedCFrame end)
+                        break
+                    end
+
+                    -- Create seat and weld to torso
+                    local seat = Instance.new("Seat")
+                    seat.Name        = "vantaInvisChair"
+                    seat.Anchored    = false
+                    seat.CanCollide  = false
+                    seat.Transparency= 1
+                    seat.Position    = seatPos
+                    seat.Parent      = workspace
+
+                    local weld = Instance.new("Weld")
+                    weld.Part0  = seat
+                    weld.Part1  = torso
+                    weld.Parent = seat
+
+                    -- Wait for weld to register on the server
+                    task.wait(0.1)
+
+                    -- Teleport seat back — character should come with it
+                    pcall(function() seat.CFrame = savedCFrame end)
+                    task.wait(0.1)
+
+                    -- Verify: check if HRP is back near original position
+                    local dist = (hrp.Position - savedCFrame.Position).Magnitude
+                    if dist < 10 then
+                        success = true
+                    else
+                        -- Weld didn't hold — retry
+                        warn("[vanta] Invis seat weld failed (attempt "..attempts.."), retrying...")
+                        task.wait(0.05)
+                    end
+                end
+
+                if not success then
+                    -- All attempts failed — abort and clean up
+                    warn("[vanta] Invis seat method failed after "..maxAttempts.." attempts")
+                    local failedSeat = workspace:FindFirstChild("vantaInvisChair")
+                    if failedSeat then pcall(function() failedSeat:Destroy() end) end
+                    pcall(function() hrp.CFrame = savedCFrame end)
+                    for _, part in pairs(chr:GetDescendants()) do
+                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                            part.Transparency = 0
+                        end
+                    end
+                    getgenv().InvisEnabled    = false
+                    getgenv().InvisInitialized = false
+                    return
+                end
+            end
+
+            -- ── Hologram ──────────────────────────────────────────────────────
+            if getgenv().HoloModel then
+                pcall(function() getgenv().HoloModel:Destroy() end)
+            end
+            local holoModel = Instance.new("Model")
+            holoModel.Name   = "VantaHolo"
+            holoModel.Parent = workspace
+
+            local holoParts = {}
+            for _, part in pairs(chr:GetDescendants()) do
+                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                    local clone        = Instance.new("Part")
+                    clone.Size         = part.Size
+                    clone.CFrame       = part.CFrame
+                    clone.Anchored     = true
+                    clone.CanCollide   = false
+                    clone.CastShadow   = false
+                    clone.Transparency = 0.35
+                    clone.Color        = Color3.fromRGB(100, 190, 255)
+                    clone.Material     = Enum.Material.Neon
+                    clone.Parent       = holoModel
+                    local mesh = part:FindFirstChildWhichIsA("SpecialMesh")
+                    if mesh then mesh:Clone().Parent = clone end
+                    holoParts[part] = clone
+                end
+            end
+
+            getgenv().HoloModel = holoModel
+
+            -- ── RenderStepped ─────────────────────────────────────────────────
+            if getgenv().InvisRenderConn then
+                pcall(function() getgenv().InvisRenderConn:Disconnect() end)
+            end
+
+            getgenv().InvisRenderConn = RunService.RenderStepped:Connect(function()
+                if not getgenv().InvisEnabled then return end
+                for _, part in pairs(chr:GetDescendants()) do
+                    if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                        part.Transparency = 1
+                    end
+                end
+                for realPart, holoPart in pairs(holoParts) do
+                    if realPart and realPart.Parent and holoPart and holoPart.Parent then
+                        holoPart.CFrame = realPart.CFrame
+                    end
+                end
+            end)
+        end
+
+        setup()
+
+        getgenv().InvisCharConn = lp.CharacterAdded:Connect(function()
+            getgenv().InvisEnabled = false
+            local seat = workspace:FindFirstChild("vantaInvisChair")
+            if seat then pcall(function() seat:Destroy() end) end
+            task.wait(1)
+            if state then setup() end
+        end)
+
+        getgenv().InvisInitialized = true
+    end,
+})
 -- ============================================================
 --  EXTENDED ANTI-STANDS — extra info
 -- ============================================================
@@ -3158,6 +3641,52 @@ TabMisc:CreateButton({
     end,
 })
 
+TabMisc:CreateToggle({
+    Name         = "Stand Pilot",
+    CurrentValue = false,
+    Callback     = function(v)
+        togglePilot(v)
+    end,
+})
+
+TabMisc:CreateToggle({
+    Name         = "Pilot Speed Changer",
+    CurrentValue = false,
+    Callback     = function(v)
+        pilotSpeedChanger = v
+    end,
+})
+
+TabMisc:CreateSlider({
+    Name         = "Pilot Speed",
+    Range        = {0, 200},
+    Increment    = 1,
+    CurrentValue = 50,
+    Callback     = function(v)
+        pilotSpeed = v
+    end,
+})
+
+TabMisc:CreateSection("Movement")
+
+TabMisc:CreateToggle({
+    Name         = "Fly Toggle",
+    CurrentValue = false,
+    Callback     = function(v)
+        toggleFly(v)
+    end,
+})
+
+TabMisc:CreateSlider({
+    Name         = "Fly Speed",
+    Range        = {10, 500},
+    Increment    = 10,
+    CurrentValue = 50,
+    Callback     = function(v)
+        flySpeed = v
+    end,
+})
+
 TabMisc:CreateButton({
     Name     = "Unequip All Tools",
     Callback = function()
@@ -3181,7 +3710,7 @@ TabSettings:CreateSection("About")
 
 TabSettings:CreateParagraph({
     Title   = "vanta.dev | YBA",
-    Content = "Thank you for using my script! :) -scrilisk",
+    Content = "Thank you for using my script! :) scrilisk & michael",
 })
 
 -- ============================================================
