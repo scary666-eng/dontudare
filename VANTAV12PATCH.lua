@@ -43,6 +43,47 @@ local Window = Rayfield:CreateWindow({
     LoadingSubtitle     = "Your Bizarre Adventure",
     ConfigurationSaving = { Enabled = false },
     KeySystem           = false,
+    Theme               = {
+        TextColor = Color3.fromRGB(220, 200, 255),
+
+        Background = Color3.fromRGB(10, 5, 18),
+        Topbar = Color3.fromRGB(20, 10, 35),
+        Shadow = Color3.fromRGB(5, 0, 10),
+
+        NotificationBackground = Color3.fromRGB(15, 8, 28),
+        NotificationActionsBackground = Color3.fromRGB(80, 40, 140),
+
+        TabBackground = Color3.fromRGB(35, 15, 60),
+        TabStroke = Color3.fromRGB(80, 40, 120),
+        TabBackgroundSelected = Color3.fromRGB(120, 60, 200),
+        TabTextColor = Color3.fromRGB(200, 170, 255),
+        SelectedTabTextColor = Color3.fromRGB(255, 240, 255),
+
+        ElementBackground = Color3.fromRGB(20, 10, 38),
+        ElementBackgroundHover = Color3.fromRGB(30, 15, 55),
+        SecondaryElementBackground = Color3.fromRGB(12, 5, 22),
+        ElementStroke = Color3.fromRGB(80, 40, 130),
+        SecondaryElementStroke = Color3.fromRGB(55, 25, 95),
+
+        SliderBackground = Color3.fromRGB(90, 30, 160),
+        SliderProgress = Color3.fromRGB(120, 50, 210),
+        SliderStroke = Color3.fromRGB(150, 80, 255),
+
+        ToggleBackground = Color3.fromRGB(18, 8, 32),
+        ToggleEnabled = Color3.fromRGB(120, 50, 210),
+        ToggleDisabled = Color3.fromRGB(50, 25, 80),
+        ToggleEnabledStroke = Color3.fromRGB(160, 90, 255),
+        ToggleDisabledStroke = Color3.fromRGB(80, 40, 110),
+        ToggleEnabledOuterStroke = Color3.fromRGB(100, 50, 160),
+        ToggleDisabledOuterStroke = Color3.fromRGB(35, 15, 60),
+
+        DropdownSelected = Color3.fromRGB(30, 12, 55),
+        DropdownUnselected = Color3.fromRGB(18, 8, 32),
+
+        InputBackground = Color3.fromRGB(18, 8, 32),
+        InputStroke = Color3.fromRGB(90, 45, 145),
+        PlaceholderColor = Color3.fromRGB(140, 100, 190),
+    },
 })
 
 -- ── Services ──────────────────────────────────────────────────────────────────
