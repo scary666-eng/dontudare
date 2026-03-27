@@ -765,7 +765,7 @@ local dragBarCosmetic = dragBar and dragBar.Drag or nil
 local VantaGlowFrame = Instance.new("Frame")
 VantaGlowFrame.Name = "VantaGlow"
 VantaGlowFrame.BackgroundTransparency = 1
-VantaGlowFrame.Size = UDim2.new(1, 360, 1, 360)
+VantaGlowFrame.Size = UDim2.new(1, 60, 1, 60)
 VantaGlowFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 VantaGlowFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 VantaGlowFrame.ZIndex = 0
@@ -774,9 +774,10 @@ VantaGlowFrame.Parent = Main
 local VantaGlowImage = Instance.new("ImageLabel")
 VantaGlowImage.Name = "Image"
 VantaGlowImage.BackgroundTransparency = 1
-VantaGlowImage.Image = "rbxassetid://5028857084"
+VantaGlowImage.Image = "rbxassetid://1316045217"
 VantaGlowImage.ImageColor3 = Color3.fromRGB(0, 200, 220)
 VantaGlowImage.ImageTransparency = 1
+VantaGlowImage.ScaleType = Enum.ScaleType.Stretch
 VantaGlowImage.Size = UDim2.new(1, 0, 1, 0)
 VantaGlowImage.ZIndex = 0
 VantaGlowImage.Parent = VantaGlowFrame
@@ -784,7 +785,7 @@ VantaGlowImage.Parent = VantaGlowFrame
 -- Sync glow visibility with the main window fade in/out
 Main:GetPropertyChangedSignal('BackgroundTransparency'):Connect(function()
 	if Main.BackgroundTransparency < 1 then
-		TweenService:Create(VantaGlowImage, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.55}):Play()
+		TweenService:Create(VantaGlowImage, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.3}):Play()
 	else
 		TweenService:Create(VantaGlowImage, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
 	end
