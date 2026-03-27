@@ -761,6 +761,35 @@ local dragBar = Rayfield:FindFirstChild('Drag')
 local dragInteract = dragBar and dragBar.Interact or nil
 local dragBarCosmetic = dragBar and dragBar.Drag or nil
 
+-- Blue glow anchored to Main (child of Main = auto-follows all drags)
+local VantaGlowFrame = Instance.new("Frame")
+VantaGlowFrame.Name = "VantaGlow"
+VantaGlowFrame.BackgroundTransparency = 1
+VantaGlowFrame.Size = UDim2.new(1, 360, 1, 360)
+VantaGlowFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+VantaGlowFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+VantaGlowFrame.ZIndex = 0
+VantaGlowFrame.Parent = Main
+
+local VantaGlowImage = Instance.new("ImageLabel")
+VantaGlowImage.Name = "Image"
+VantaGlowImage.BackgroundTransparency = 1
+VantaGlowImage.Image = "rbxassetid://5028857084"
+VantaGlowImage.ImageColor3 = Color3.fromRGB(0, 200, 220)
+VantaGlowImage.ImageTransparency = 1
+VantaGlowImage.Size = UDim2.new(1, 0, 1, 0)
+VantaGlowImage.ZIndex = 0
+VantaGlowImage.Parent = VantaGlowFrame
+
+-- Sync glow visibility with the main window fade in/out
+Main:GetPropertyChangedSignal('BackgroundTransparency'):Connect(function()
+	if Main.BackgroundTransparency < 1 then
+		TweenService:Create(VantaGlowImage, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.55}):Play()
+	else
+		TweenService:Create(VantaGlowImage, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
+	end
+end)
+
 local dragOffset = 255
 local dragOffsetMobile = 150
 
@@ -793,6 +822,9 @@ local function ChangeTheme(Theme)
 	Rayfield.Main.Topbar.BackgroundColor3 = SelectedTheme.Topbar
 	Rayfield.Main.Topbar.CornerRepair.BackgroundColor3 = SelectedTheme.Topbar
 	Rayfield.Main.Shadow.Image.ImageColor3 = SelectedTheme.Shadow
+	if Main:FindFirstChild("VantaGlow") then
+		Main.VantaGlow.Image.ImageColor3 = SelectedTheme.SliderProgress
+	end
 
 	Rayfield.Main.Topbar.ChangeSize.ImageColor3 = SelectedTheme.TextColor
 	Rayfield.Main.Topbar.Hide.ImageColor3 = SelectedTheme.TextColor
@@ -1825,19 +1857,6 @@ function RayfieldLibrary:CreateWindow(Settings)
 			KeyMain.Title.Text = Settings.KeySettings.Title or Settings.Name
 			KeyMain.Subtitle.Text = Settings.KeySettings.Subtitle or "Key System"
 			KeyMain.NoteMessage.Text = Settings.KeySettings.Note or "No instructions"
-
-			-- Apply UI theme colors to key system
-			KeyMain.BackgroundColor3 = SelectedTheme.Background
-			KeyMain.Title.TextColor3 = SelectedTheme.TextColor
-			KeyMain.Subtitle.TextColor3 = SelectedTheme.TextColor
-			KeyMain.KeyNote.TextColor3 = SelectedTheme.TextColor
-			KeyMain.NoteTitle.TextColor3 = SelectedTheme.TextColor
-			KeyMain.NoteMessage.TextColor3 = SelectedTheme.TextColor
-			KeyMain.Input.BackgroundColor3 = SelectedTheme.InputBackground
-			KeyMain.Input.UIStroke.Color = SelectedTheme.InputStroke
-			KeyMain.Input.InputBox.TextColor3 = SelectedTheme.TextColor
-			KeyMain.Input.InputBox.PlaceholderColor3 = SelectedTheme.PlaceholderColor
-			KeyMain.Hide.ImageColor3 = SelectedTheme.TextColor
 
 			KeyMain.Size = UDim2.new(0, 467, 0, 175)
 			KeyMain.BackgroundTransparency = 1
