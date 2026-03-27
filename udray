@@ -761,15 +761,15 @@ local dragBar = Rayfield:FindFirstChild('Drag')
 local dragInteract = dragBar and dragBar.Interact or nil
 local dragBarCosmetic = dragBar and dragBar.Drag or nil
 
--- Blue glow anchored to Main (child of Main = auto-follows all drags)
+-- Blue glow parented to Rayfield (ScreenGui) so ClipsDescendants on Main doesn't cut it off
+-- Position/size are kept in sync with Main via RenderStepped
 local VantaGlowFrame = Instance.new("Frame")
 VantaGlowFrame.Name = "VantaGlow"
 VantaGlowFrame.BackgroundTransparency = 1
-VantaGlowFrame.Size = UDim2.new(1, 16, 1, 16)
-VantaGlowFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-VantaGlowFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-VantaGlowFrame.ZIndex = 0
-VantaGlowFrame.Parent = Main
+VantaGlowFrame.Size = UDim2.new(0, 0, 0, 0)
+VantaGlowFrame.Position = UDim2.new(0, 0, 0, 0)
+VantaGlowFrame.ZIndex = Main.ZIndex - 1
+VantaGlowFrame.Parent = Rayfield
 
 local VantaGlowImage = Instance.new("ImageLabel")
 VantaGlowImage.Name = "Image"
@@ -779,13 +779,23 @@ VantaGlowImage.ImageColor3 = Color3.fromRGB(0, 200, 220)
 VantaGlowImage.ImageTransparency = 1
 VantaGlowImage.ScaleType = Enum.ScaleType.Stretch
 VantaGlowImage.Size = UDim2.new(1, 0, 1, 0)
-VantaGlowImage.ZIndex = 0
+VantaGlowImage.ZIndex = 1
 VantaGlowImage.Parent = VantaGlowFrame
+
+local glowSpread = 40
+RunService.RenderStepped:Connect(function()
+	if Main.Visible then
+		local absPos  = Main.AbsolutePosition
+		local absSize = Main.AbsoluteSize
+		VantaGlowFrame.Position = UDim2.fromOffset(absPos.X - glowSpread, absPos.Y - glowSpread)
+		VantaGlowFrame.Size     = UDim2.fromOffset(absSize.X + glowSpread * 2, absSize.Y + glowSpread * 2)
+	end
+end)
 
 -- Sync glow visibility with the main window fade in/out
 Main:GetPropertyChangedSignal('BackgroundTransparency'):Connect(function()
 	if Main.BackgroundTransparency < 1 then
-		TweenService:Create(VantaGlowImage, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.6}):Play()
+		TweenService:Create(VantaGlowImage, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.4}):Play()
 	else
 		TweenService:Create(VantaGlowImage, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
 	end
@@ -823,9 +833,7 @@ local function ChangeTheme(Theme)
 	Rayfield.Main.Topbar.BackgroundColor3 = SelectedTheme.Topbar
 	Rayfield.Main.Topbar.CornerRepair.BackgroundColor3 = SelectedTheme.Topbar
 	Rayfield.Main.Shadow.Image.ImageColor3 = SelectedTheme.Shadow
-	if Main:FindFirstChild("VantaGlow") then
-		Main.VantaGlow.Image.ImageColor3 = SelectedTheme.SliderProgress
-	end
+	VantaGlowImage.ImageColor3 = SelectedTheme.SliderProgress
 
 	Rayfield.Main.Topbar.ChangeSize.ImageColor3 = SelectedTheme.TextColor
 	Rayfield.Main.Topbar.Hide.ImageColor3 = SelectedTheme.TextColor
