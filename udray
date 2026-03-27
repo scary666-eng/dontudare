@@ -777,7 +777,8 @@ VantaGlowImage.BackgroundTransparency = 1
 VantaGlowImage.Image = "rbxassetid://1316045217"
 VantaGlowImage.ImageColor3 = Color3.fromRGB(0, 200, 220)
 VantaGlowImage.ImageTransparency = 1
-VantaGlowImage.ScaleType = Enum.ScaleType.Stretch
+VantaGlowImage.ScaleType = Enum.ScaleType.Slice
+VantaGlowImage.SliceCenter = Rect.new(100, 100, 924, 924)
 VantaGlowImage.Size = UDim2.new(1, 0, 1, 0)
 VantaGlowImage.ZIndex = 1
 VantaGlowImage.Parent = VantaGlowFrame
@@ -795,7 +796,7 @@ end)
 -- Sync glow visibility with the main window fade in/out
 Main:GetPropertyChangedSignal('BackgroundTransparency'):Connect(function()
 	if Main.BackgroundTransparency < 1 then
-		TweenService:Create(VantaGlowImage, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.4}):Play()
+		TweenService:Create(VantaGlowImage, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.3}):Play()
 	else
 		TweenService:Create(VantaGlowImage, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
 	end
