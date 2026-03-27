@@ -761,46 +761,8 @@ local dragBar = Rayfield:FindFirstChild('Drag')
 local dragInteract = dragBar and dragBar.Interact or nil
 local dragBarCosmetic = dragBar and dragBar.Drag or nil
 
--- Blue glow parented to Rayfield (ScreenGui) so ClipsDescendants on Main doesn't cut it off
--- Position/size are kept in sync with Main via RenderStepped
-local VantaGlowFrame = Instance.new("Frame")
-VantaGlowFrame.Name = "VantaGlow"
-VantaGlowFrame.BackgroundTransparency = 1
-VantaGlowFrame.Size = UDim2.new(0, 0, 0, 0)
-VantaGlowFrame.Position = UDim2.new(0, 0, 0, 0)
-VantaGlowFrame.ZIndex = Main.ZIndex - 1
-VantaGlowFrame.Parent = Rayfield
-
-local VantaGlowImage = Instance.new("ImageLabel")
-VantaGlowImage.Name = "Image"
-VantaGlowImage.BackgroundTransparency = 1
-VantaGlowImage.Image = "rbxassetid://1316045217"
-VantaGlowImage.ImageColor3 = Color3.fromRGB(0, 200, 220)
-VantaGlowImage.ImageTransparency = 1
-VantaGlowImage.ScaleType = Enum.ScaleType.Slice
-VantaGlowImage.SliceCenter = Rect.new(100, 100, 924, 924)
-VantaGlowImage.Size = UDim2.new(1, 0, 1, 0)
-VantaGlowImage.ZIndex = 1
-VantaGlowImage.Parent = VantaGlowFrame
-
-local glowSpread = 40
-RunService.RenderStepped:Connect(function()
-	if Main.Visible then
-		local absPos  = Main.AbsolutePosition
-		local absSize = Main.AbsoluteSize
-		VantaGlowFrame.Position = UDim2.fromOffset(absPos.X - glowSpread, absPos.Y - glowSpread)
-		VantaGlowFrame.Size     = UDim2.fromOffset(absSize.X + glowSpread * 2, absSize.Y + glowSpread * 2)
-	end
-end)
-
--- Sync glow visibility with the main window fade in/out
-Main:GetPropertyChangedSignal('BackgroundTransparency'):Connect(function()
-	if Main.BackgroundTransparency < 1 then
-		TweenService:Create(VantaGlowImage, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.3}):Play()
-	else
-		TweenService:Create(VantaGlowImage, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
-	end
-end)
+-- Blue glow via existing shadow image
+Main.Shadow.Image.ImageColor3 = Color3.fromRGB(0, 180, 220)
 
 local dragOffset = 255
 local dragOffsetMobile = 150
@@ -833,8 +795,7 @@ local function ChangeTheme(Theme)
 	Rayfield.Main.BackgroundColor3 = SelectedTheme.Background
 	Rayfield.Main.Topbar.BackgroundColor3 = SelectedTheme.Topbar
 	Rayfield.Main.Topbar.CornerRepair.BackgroundColor3 = SelectedTheme.Topbar
-	Rayfield.Main.Shadow.Image.ImageColor3 = SelectedTheme.Shadow
-	VantaGlowImage.ImageColor3 = SelectedTheme.SliderProgress
+	Rayfield.Main.Shadow.Image.ImageColor3 = Color3.fromRGB(0, 180, 220)
 
 	Rayfield.Main.Topbar.ChangeSize.ImageColor3 = SelectedTheme.TextColor
 	Rayfield.Main.Topbar.Hide.ImageColor3 = SelectedTheme.TextColor
@@ -1870,16 +1831,28 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 			KeyMain.Size = UDim2.new(0, 467, 0, 175)
 			KeyMain.BackgroundTransparency = 1
+			KeyMain.BackgroundColor3 = Color3.fromRGB(240, 248, 255)
 			KeyMain.Shadow.Image.ImageTransparency = 1
+			KeyMain.Shadow.Image.ImageColor3 = Color3.fromRGB(0, 180, 220)
 			KeyMain.Title.TextTransparency = 1
+			KeyMain.Title.TextColor3 = Color3.fromRGB(0, 170, 210)
 			KeyMain.Subtitle.TextTransparency = 1
+			KeyMain.Subtitle.TextColor3 = Color3.fromRGB(80, 160, 200)
 			KeyMain.KeyNote.TextTransparency = 1
+			KeyMain.KeyNote.TextColor3 = Color3.fromRGB(100, 170, 210)
 			KeyMain.Input.BackgroundTransparency = 1
+			KeyMain.Input.BackgroundColor3 = Color3.fromRGB(220, 238, 252)
 			KeyMain.Input.UIStroke.Transparency = 1
+			KeyMain.Input.UIStroke.Color = Color3.fromRGB(0, 180, 220)
 			KeyMain.Input.InputBox.TextTransparency = 1
+			KeyMain.Input.InputBox.TextColor3 = Color3.fromRGB(0, 140, 180)
+			KeyMain.Input.InputBox.PlaceholderColor3 = Color3.fromRGB(130, 190, 220)
 			KeyMain.NoteTitle.TextTransparency = 1
+			KeyMain.NoteTitle.TextColor3 = Color3.fromRGB(0, 160, 200)
 			KeyMain.NoteMessage.TextTransparency = 1
+			KeyMain.NoteMessage.TextColor3 = Color3.fromRGB(80, 150, 190)
 			KeyMain.Hide.ImageTransparency = 1
+			KeyMain.Hide.ImageColor3 = Color3.fromRGB(0, 170, 210)
 
 			TweenService:Create(KeyMain, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(KeyMain, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 500, 0, 187)}):Play()
