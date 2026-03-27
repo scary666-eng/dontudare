@@ -795,7 +795,24 @@ local function ChangeTheme(Theme)
 	Rayfield.Main.BackgroundColor3 = SelectedTheme.Background
 	Rayfield.Main.Topbar.BackgroundColor3 = SelectedTheme.Topbar
 	Rayfield.Main.Topbar.CornerRepair.BackgroundColor3 = SelectedTheme.Topbar
-	Rayfield.Main.Shadow.Image.ImageColor3 = Color3.fromRGB(0, 180, 220)
+	-- Enhanced glow effect: use a more vibrant color and less transparency
+	Rayfield.Main.Shadow.Image.ImageColor3 = Color3.fromRGB(120, 200, 255)
+	Rayfield.Main.Shadow.Image.ImageTransparency = 0.2
+	-- Add a UIGradient for a soft glow if not present
+	if not Rayfield.Main:FindFirstChild("GlowGradient") then
+		local gradient = Instance.new("UIGradient")
+		gradient.Name = "GlowGradient"
+		gradient.Color = ColorSequence.new{
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 200, 255)),
+			ColorSequenceKeypoint.new(1, SelectedTheme.Background)
+		}
+		gradient.Transparency = NumberSequence.new{
+			NumberSequenceKeypoint.new(0, 0.1),
+			NumberSequenceKeypoint.new(1, 0.8)
+		}
+		gradient.Rotation = 90
+		gradient.Parent = Rayfield.Main
+	end
 
 	Rayfield.Main.Topbar.ChangeSize.ImageColor3 = SelectedTheme.TextColor
 	Rayfield.Main.Topbar.Hide.ImageColor3 = SelectedTheme.TextColor
@@ -1830,29 +1847,51 @@ function RayfieldLibrary:CreateWindow(Settings)
 			KeyMain.NoteMessage.Text = Settings.KeySettings.Note or "No instructions"
 
 			KeyMain.Size = UDim2.new(0, 467, 0, 175)
-			KeyMain.BackgroundTransparency = 1
-			KeyMain.BackgroundColor3 = Color3.fromRGB(240, 248, 255)
-			KeyMain.Shadow.Image.ImageTransparency = 1
-			KeyMain.Shadow.Image.ImageColor3 = Color3.fromRGB(0, 180, 220)
-			KeyMain.Title.TextTransparency = 1
-			KeyMain.Title.TextColor3 = Color3.fromRGB(0, 170, 210)
-			KeyMain.Subtitle.TextTransparency = 1
-			KeyMain.Subtitle.TextColor3 = Color3.fromRGB(80, 160, 200)
-			KeyMain.KeyNote.TextTransparency = 1
-			KeyMain.KeyNote.TextColor3 = Color3.fromRGB(100, 170, 210)
-			KeyMain.Input.BackgroundTransparency = 1
-			KeyMain.Input.BackgroundColor3 = Color3.fromRGB(220, 238, 252)
-			KeyMain.Input.UIStroke.Transparency = 1
-			KeyMain.Input.UIStroke.Color = Color3.fromRGB(0, 180, 220)
-			KeyMain.Input.InputBox.TextTransparency = 1
-			KeyMain.Input.InputBox.TextColor3 = Color3.fromRGB(0, 140, 180)
-			KeyMain.Input.InputBox.PlaceholderColor3 = Color3.fromRGB(130, 190, 220)
-			KeyMain.NoteTitle.TextTransparency = 1
-			KeyMain.NoteTitle.TextColor3 = Color3.fromRGB(0, 160, 200)
-			KeyMain.NoteMessage.TextTransparency = 1
-			KeyMain.NoteMessage.TextColor3 = Color3.fromRGB(80, 150, 190)
-			KeyMain.Hide.ImageTransparency = 1
-			KeyMain.Hide.ImageColor3 = Color3.fromRGB(0, 170, 210)
+			KeyMain.BackgroundTransparency = 0.05
+			KeyMain.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			-- Frosted glass effect: add a white semi-transparent overlay and a blueish glow
+			if not KeyMain:FindFirstChild("FrostGlow") then
+				local frost = Instance.new("Frame")
+				frost.Name = "FrostGlow"
+				frost.BackgroundTransparency = 0.6
+				frost.BackgroundColor3 = Color3.fromRGB(255,255,255)
+				frost.Size = UDim2.new(1,0,1,0)
+				frost.Position = UDim2.new(0,0,0,0)
+				frost.ZIndex = KeyMain.ZIndex + 1
+				frost.Parent = KeyMain
+				local frostGradient = Instance.new("UIGradient")
+				frostGradient.Color = ColorSequence.new{
+					ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
+					ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 230, 255))
+				}
+				frostGradient.Transparency = NumberSequence.new{
+					NumberSequenceKeypoint.new(0, 0.2),
+					NumberSequenceKeypoint.new(1, 0.7)
+				}
+				frostGradient.Rotation = 90
+				frostGradient.Parent = frost
+			end
+			KeyMain.Shadow.Image.ImageTransparency = 0.3
+			KeyMain.Shadow.Image.ImageColor3 = Color3.fromRGB(180, 220, 255)
+			KeyMain.Title.TextTransparency = 0
+			KeyMain.Title.TextColor3 = Color3.fromRGB(80, 80, 80)
+			KeyMain.Subtitle.TextTransparency = 0
+			KeyMain.Subtitle.TextColor3 = Color3.fromRGB(120, 120, 120)
+			KeyMain.KeyNote.TextTransparency = 0
+			KeyMain.KeyNote.TextColor3 = Color3.fromRGB(120, 120, 120)
+			KeyMain.Input.BackgroundTransparency = 0.1
+			KeyMain.Input.BackgroundColor3 = Color3.fromRGB(255,255,255)
+			KeyMain.Input.UIStroke.Transparency = 0.2
+			KeyMain.Input.UIStroke.Color = Color3.fromRGB(200, 200, 200)
+			KeyMain.Input.InputBox.TextTransparency = 0
+			KeyMain.Input.InputBox.TextColor3 = Color3.fromRGB(80, 80, 80)
+			KeyMain.Input.InputBox.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
+			KeyMain.NoteTitle.TextTransparency = 0
+			KeyMain.NoteTitle.TextColor3 = Color3.fromRGB(120, 120, 120)
+			KeyMain.NoteMessage.TextTransparency = 0
+			KeyMain.NoteMessage.TextColor3 = Color3.fromRGB(120, 120, 120)
+			KeyMain.Hide.ImageTransparency = 0.2
+			KeyMain.Hide.ImageColor3 = Color3.fromRGB(180, 220, 255)
 
 			TweenService:Create(KeyMain, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play()
 			TweenService:Create(KeyMain, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 500, 0, 187)}):Play()
