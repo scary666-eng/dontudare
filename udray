@@ -1826,6 +1826,19 @@ function RayfieldLibrary:CreateWindow(Settings)
 			KeyMain.Subtitle.Text = Settings.KeySettings.Subtitle or "Key System"
 			KeyMain.NoteMessage.Text = Settings.KeySettings.Note or "No instructions"
 
+			-- Apply UI theme colors to key system
+			KeyMain.BackgroundColor3 = SelectedTheme.Background
+			KeyMain.Title.TextColor3 = SelectedTheme.TextColor
+			KeyMain.Subtitle.TextColor3 = SelectedTheme.TextColor
+			KeyMain.KeyNote.TextColor3 = SelectedTheme.TextColor
+			KeyMain.NoteTitle.TextColor3 = SelectedTheme.TextColor
+			KeyMain.NoteMessage.TextColor3 = SelectedTheme.TextColor
+			KeyMain.Input.BackgroundColor3 = SelectedTheme.InputBackground
+			KeyMain.Input.UIStroke.Color = SelectedTheme.InputStroke
+			KeyMain.Input.InputBox.TextColor3 = SelectedTheme.TextColor
+			KeyMain.Input.InputBox.PlaceholderColor3 = SelectedTheme.PlaceholderColor
+			KeyMain.Hide.ImageColor3 = SelectedTheme.TextColor
+
 			KeyMain.Size = UDim2.new(0, 467, 0, 175)
 			KeyMain.BackgroundTransparency = 1
 			KeyMain.Shadow.Image.ImageTransparency = 1
