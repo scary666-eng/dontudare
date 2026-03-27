@@ -765,7 +765,7 @@ local dragBarCosmetic = dragBar and dragBar.Drag or nil
 local VantaGlowFrame = Instance.new("Frame")
 VantaGlowFrame.Name = "VantaGlow"
 VantaGlowFrame.BackgroundTransparency = 1
-VantaGlowFrame.Size = UDim2.new(1, 60, 1, 60)
+VantaGlowFrame.Size = UDim2.new(1, 16, 1, 16)
 VantaGlowFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 VantaGlowFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 VantaGlowFrame.ZIndex = 0
@@ -785,7 +785,7 @@ VantaGlowImage.Parent = VantaGlowFrame
 -- Sync glow visibility with the main window fade in/out
 Main:GetPropertyChangedSignal('BackgroundTransparency'):Connect(function()
 	if Main.BackgroundTransparency < 1 then
-		TweenService:Create(VantaGlowImage, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.3}):Play()
+		TweenService:Create(VantaGlowImage, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.6}):Play()
 	else
 		TweenService:Create(VantaGlowImage, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
 	end
